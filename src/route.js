@@ -1,5 +1,5 @@
 const express = require("express");
-
+const departmentController = require("./controller/department.Controller");
 const attendanceController = require("./controller/attendance.Controller");
 const employeeController = require("./controller/employee.Controller");
 const leaveController = require("./controller/leave.Controller");
@@ -35,8 +35,6 @@ const jobCategoryController = require("./controller/jobCategory.controller");
 const jobRequisitionController = require("./controller/jobRequisition.controller");
 const jobTypeController = require("./controller/jobType.controller");
 const jobLocationController = require("./controller/jobLocation.controller");
-const departmentController = require("./controller/department.Controller");
-
 
 const router = express.Router();
 
