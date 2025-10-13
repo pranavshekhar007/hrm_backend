@@ -1,9 +1,9 @@
 const express = require("express");
 const { sendResponse } = require("../utils/common");
-require("dotenv").config();
 const Department = require("../model/department.schema");
-const departmentController = express.Router();
 const auth = require("../utils/auth");
+
+const departmentController = express.Router();
 
 departmentController.post("/create", async (req, res) => {
   try {
