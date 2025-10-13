@@ -1,0 +1,121 @@
+const express = require("express");
+const { sendResponse } = require("../utils/common");
+require("dotenv").config();
+const Department = require("../model/department.schema");
+const departmentController = express.Router();
+const auth = require("../utils/auth");
+
+departmentController.post("/create", async (req, res) => {
+  try {
+    const departmentCreated = await Department.create(req.body);
+
+    sendResponse(res, 200, "Success", {
+      message: "Department created successfully!",
+      data: departmentCreated,
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error(error);
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+    });
+  }
+});
+
+departmentController.post("/list", async (req, res) => {
+  try {
+    const {
+      searchKey = "",
+      status,
+      pageNo = 1,
+      pageCount = 10,
+      sortByField,
+      sortByOrder,
+      branch,
+    } = req.body;
+
+    const query = {};
+    if (status) query.status = status;
+    if (branch) query.branch = branch;
+    if (searchKey) query.name = { $regex: searchKey, $options: "i" };
+
+    const sortField = sortByField || "createdAt";
+    const sortOrder = sortByOrder === "asc" ? 1 : -1;
+    const sortOption = { [sortField]: sortOrder };
+
+    const departmentList = await Department.find(query)
+      .populate("branch")
+      .sort(sortOption)
+      .limit(parseInt(pageCount))
+      .skip((pageNo - 1) * parseInt(pageCount));
+
+    const totalCount = await Department.countDocuments(query);
+
+    sendResponse(res, 200, "Success", {
+      message: "Department list retrieved successfully!",
+      data: departmentList,
+      total: totalCount,
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error(error);
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+    });
+  }
+});
+
+departmentController.put("/update", async (req, res) => {
+  try {
+    const id = req.body._id;
+
+    const departmentData = await Department.findById(id);
+    if (!departmentData) {
+      return sendResponse(res, 404, "Failed", {
+        message: "Department not found",
+      });
+    }
+
+    const updatedDepartment = await Department.findByIdAndUpdate(id, req.body, {
+      new: true,
+    });
+
+    sendResponse(res, 200, "Success", {
+      message: "Department updated successfully!",
+      data: updatedDepartment,
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error(error);
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+    });
+  }
+});
+
+departmentController.delete("/delete/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const departmentItem = await Department.findById(id);
+    if (!departmentItem) {
+      return sendResponse(res, 404, "Failed", {
+        message: "Department not found",
+      });
+    }
+
+    await Department.findByIdAndDelete(id);
+
+    sendResponse(res, 200, "Success", {
+      message: "Department deleted successfully!",
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error(error);
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+    });
+  }
+});
+
+module.exports = departmentController;
