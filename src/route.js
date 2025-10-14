@@ -35,6 +35,11 @@ const jobCategoryController = require("./controller/jobCategoryController");
 const jobRequisitionController = require("./controller/jobRequisitionController");
 const jobTypeController = require("./controller/jobTypeController");
 const jobLocationController = require("./controller/jobLocationController");
+const adminController = require("./controller/adminController");
+const jobPositionController = require("./controller/jobPositionController");
+const candidateSourceController = require("./controller/candidateSourceController");
+const candidateController = require("./controller/candidateController");
+const meetingTypeController = require("./controller/meetingTypeController");
 
 const router = express.Router();
 
@@ -74,5 +79,10 @@ router.use("/job-category", jobCategoryController);
 router.use("/job-requisition", jobRequisitionController);
 router.use("/job-type", jobTypeController);
 router.use("/job-location", jobLocationController);
+router.use("/admin", adminController);
+router.use("/job-position", jobPositionController);
+router.use("/candidate-source", candidateSourceController);
+router.use("/candidate", candidateController);
+router.use("/meeting-type", meetingTypeController);
 
 module.exports = router;
