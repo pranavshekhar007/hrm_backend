@@ -99,45 +99,93 @@ roleController.post("/list", async (req, res) => {
   });
   
 
-roleController.put("/update", async (req, res) => {
-  try {
-    const { _id, name, permissions, description } = req.body;
+  roleController.put("/update/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, permissions, description } = req.body;
+  
+      if (!id) {
+        return sendResponse(res, 400, "Failed", { message: "Role ID is required" });
+      }
+  
+      const roleData = await Role.findById(id);
+      if (!roleData) {
+        return sendResponse(res, 404, "Failed", { message: "Role not found" });
+      }
+  
+      // Validate permissions if provided
+      if (permissions && permissions.length) {
+        for (const item of permissions) {
+          const perm = await Permission.findById(item.permissionId);
+          if (!perm) {
+            return sendResponse(res, 400, "Failed", {
+              message: `Invalid permission ID: ${item.permissionId}`,
+            });
+          }
+  
+          const invalidActions = item.actions?.filter(
+            (a) => !perm.actions.includes(a)
+          );
+  
+          if (invalidActions && invalidActions.length > 0) {
+            return sendResponse(res, 400, "Failed", {
+              message: `Invalid actions for permission '${perm.name}': ${invalidActions.join(", ")}`,
+            });
+          }
+        }
+      }
+  
+      // Perform update
+      const updatedRole = await Role.findByIdAndUpdate(
+        id,
+        { name, permissions, description },
+        { new: true }
+      ).populate("permissions.permissionId");
+  
+      sendResponse(res, 200, "Success", {
+        message: "Role updated successfully!",
+        data: updatedRole,
+        statusCode: 200,
+      });
+    } catch (error) {
+      console.error("Error updating role:", error);
+      sendResponse(res, 500, "Failed", {
+        message: error.message || "Internal server error",
+      });
+    }
+  });
+  
 
-    const roleData = await Role.findById(_id);
-    if (!roleData) {
+
+roleController.get("/details/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return sendResponse(res, 400, "Failed", { message: "Role ID is required" });
+    }
+
+    const role = await Role.findById(id)
+      .populate("permissions.permissionId") // populate permission details
+      .lean();
+
+    if (!role) {
       return sendResponse(res, 404, "Failed", { message: "Role not found" });
     }
 
-    if (permissions && permissions.length) {
-      for (const item of permissions) {
-        const perm = await Permission.findById(item.permissionId);
-        if (!perm) {
-          return sendResponse(res, 400, "Failed", {
-            message: `Invalid permission ID: ${item.permissionId}`,
-          });
-        }
-
-        const invalidActions = item.actions.filter(
-          (a) => !perm.actions.includes(a)
-        );
-
-        if (invalidActions.length > 0) {
-          return sendResponse(res, 400, "Failed", {
-            message: `Invalid actions for permission '${perm.name}': ${invalidActions.join(", ")}`,
-          });
-        }
-      }
-    }
-
-    const updatedRole = await Role.findByIdAndUpdate(
-      _id,
-      { name, permissions, description },
-      { new: true }
-    );
+    // Map permissions to include selectedActions from DB
+    const formattedPermissions = (role.permissions || []).map((perm) => ({
+      _id: perm._id,
+      permissionId: perm.permissionId,
+      selectedActions: perm.actions || [],
+      actions: undefined,
+    }));
 
     sendResponse(res, 200, "Success", {
-      message: "Role updated successfully!",
-      data: updatedRole,
+      message: "Role details retrieved successfully!",
+      data: {
+        ...role,
+        permissions: formattedPermissions,
+      },
       statusCode: 200,
     });
   } catch (error) {
@@ -147,6 +195,7 @@ roleController.put("/update", async (req, res) => {
     });
   }
 });
+
 
 roleController.delete("/delete/:id", async (req, res) => {
   try {

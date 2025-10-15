@@ -6,10 +6,7 @@ const adminSchema = mongoose.Schema({
   profilePic: {
     type: String,
   },
-  firstName: {
-    type: String,
-  },
-  lastName: {
+  name: {
     type: String,
   },
   email: {
@@ -27,6 +24,7 @@ const adminSchema = mongoose.Schema({
     ref: "Role",
     required: true,
   },
+  status: { type: Boolean, default: true },
   deviceId:{
     type: String
   }

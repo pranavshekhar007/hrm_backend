@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const User = require("../model/user.schema");
+const Admin = require("../model/admin.schema");
 
 const auth = async (req, res, next) => {
   try {
@@ -10,13 +10,13 @@ const auth = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_KEY); // Ensure JWT_KEY is set in your .env file
 
-    const user = await User.findOne({  _id: decoded.userId });
-    if (!user) {
-      return res.status(401).json({ error: "User not found or token is invalid" });
+    const admin = await Admin.findOne({  _id: decoded.adminId });
+    if (!admin) {
+      return res.status(401).json({ error: "Admin not found or token is invalid" });
     }
 
     req.token = token;
-    req.user = user;
+    req.admin = admin;
     next();
   } catch (e) {
     res.status(401).json({ error: "Invalid authentication token" });

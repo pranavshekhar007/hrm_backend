@@ -248,8 +248,9 @@ userController.post("/login", async (req, res) => {
 });
 
 // ✅ Reset Password
-userController.post("/reset-password", auth, async (req, res) => {
+userController.post("/reset-password/:id", auth, async (req, res) => {
   try {
+    const { id } = req.params;
     const { newPassword, confirmPassword } = req.body;
 
     if (!newPassword || !confirmPassword) {
@@ -267,7 +268,7 @@ userController.post("/reset-password", auth, async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     const updatedUser = await User.findByIdAndUpdate(
-      req.user.id,
+      id,
       { password: hashedPassword },
       { new: true }
     );
@@ -276,13 +277,46 @@ userController.post("/reset-password", auth, async (req, res) => {
       return sendResponse(res, 404, "Failed", { message: "User not found" });
 
     sendResponse(res, 200, "Success", {
-      message: "Password reset successfully",
+      message: `Password reset successfully for ${updatedUser.name}`,
     });
   } catch (error) {
     console.error(error);
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
+
+// ✅ Delete User by ID
+userController.delete("/delete/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return sendResponse(res, 400, "Failed", {
+        message: "User ID is required",
+      });
+    }
+
+    const deletedUser = await User.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      return sendResponse(res, 404, "Failed", {
+        message: "User not found",
+      });
+    }
+
+    sendResponse(res, 200, "Success", {
+      message: "User deleted successfully",
+      data: deletedUser,
+    });
+  } catch (error) {
+    console.error(error);
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+    });
+  }
+});
+
 
 
 
