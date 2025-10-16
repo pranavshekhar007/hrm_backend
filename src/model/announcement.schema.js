@@ -46,19 +46,18 @@ const announcementSchema = mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  targetBranches: [
+  targetBranches: 
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Branch",
     },
-  ],
-  targetDepartments: [
+  targetDepartments:
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Department",
     },
-  ],
   status: {
+    
     type: Boolean,
     default: true,
   },

@@ -16,7 +16,7 @@ const resignationSchema = new mongoose.Schema({
     required: true,
   },
   noticePeriod: {
-    type: Number, // in days
+    type: String,
   },
   reason: {
     type: String,
