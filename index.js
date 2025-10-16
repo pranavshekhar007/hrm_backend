@@ -45,9 +45,13 @@ io.on("connection", (socket) => {
   });
 });
 
-// ✅ Database connection
-mongoose.connect(process.env.DB_STRING).then(() => {
+mongoose.connect(process.env.DB_STRING, {
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,       
+}).then(() => {
   console.warn("DB connection done again");
+}).catch(err => {
+  console.error("DB Connection Error:", err.message);
 });
 
 // ✅ Attach Socket.IO instance to requests
