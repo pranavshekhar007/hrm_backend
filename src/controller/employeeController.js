@@ -105,34 +105,91 @@ employeeController.post("/list", async (req, res) => {
   }
 });
 
-employeeController.put("/update", upload.single("profileImage"), async (req, res) => {
-  try {
-    const id = req.body._id;
-    const employeeData = await Employee.findById(id);
-    if (!employeeData) return sendResponse(res, 404, "Failed", { message: "Employee not found" });
+employeeController.put(
+  "/update",
+  upload.fields([
+    { name: "profileImage", maxCount: 1 },
+    { name: "documents", maxCount: 10 },
+  ]),
+  async (req, res) => {
+    try {
+      const id = req.body._id;
+      const employeeData = await Employee.findById(id);
+      if (!employeeData)
+        return sendResponse(res, 404, "Failed", { message: "Employee not found" });
 
-    if (req.file) {
-      const uploaded = await cloudinary.uploader.upload(req.file.path);
-      req.body.profileImage = uploaded.url;
+      // --------------------------
+      // Handle profile image update
+      // --------------------------
+      if (req.files?.profileImage) {
+        const uploaded = await cloudinary.uploader.upload(req.files.profileImage[0].path);
+        req.body.profileImage = uploaded.url;
+      }
+
+      // --------------------------
+      // Handle documents merge/update
+      // --------------------------
+      if (req.files?.documents?.length > 0) {
+        const currentDocs = employeeData.documents || []; // existing documents
+        const updatedDocs = [...currentDocs];
+
+        const documentTypeArray = Array.isArray(req.body.documentType)
+          ? req.body.documentType
+          : [req.body.documentType];
+        const expiryDateArray = Array.isArray(req.body.expiryDate)
+          ? req.body.expiryDate
+          : [req.body.expiryDate];
+
+        for (let i = 0; i < req.files.documents.length; i++) {
+          const file = req.files.documents[i];
+          const uploaded = await cloudinary.uploader.upload(file.path);
+
+          const docData = {
+            fileUrl: uploaded.url,
+            documentType: documentTypeArray[i],
+            expiryDate: expiryDateArray[i],
+          };
+
+          const existingIndex = updatedDocs.findIndex(
+            (doc) => doc.documentType.toString() === documentTypeArray[i]
+          );
+
+          if (existingIndex !== -1) {
+            // Update existing document
+            updatedDocs[existingIndex] = { ...updatedDocs[existingIndex], ...docData };
+          } else {
+            // Add new document
+            updatedDocs.push(docData);
+          }
+        }
+
+        req.body.documents = updatedDocs;
+      }
+
+      // --------------------------
+      // Handle password hash
+      // --------------------------
+      if (req.body.password) {
+        const salt = await bcrypt.genSalt(10);
+        req.body.password = await bcrypt.hash(req.body.password, salt);
+      }
+
+      // --------------------------
+      // Update employee
+      // --------------------------
+      const updatedEmployee = await Employee.findByIdAndUpdate(id, req.body, { new: true });
+      sendResponse(res, 200, "Success", {
+        message: "Employee updated successfully!",
+        data: updatedEmployee,
+        statusCode: 200,
+      });
+    } catch (error) {
+      console.error("Employee update error:", error);
+      sendResponse(res, 500, "Failed", { message: error.message || "Internal server error" });
     }
-
-    if (req.body.password) {
-      const salt = await bcrypt.genSalt(10);
-      req.body.password = await bcrypt.hash(req.body.password, salt);
-    }
-
-    const updatedEmployee = await Employee.findByIdAndUpdate(id, req.body, { new: true });
-
-    sendResponse(res, 200, "Success", {
-      message: "Employee updated successfully!",
-      data: updatedEmployee,
-      statusCode: 200,
-    });
-  } catch (error) {
-    console.error(error);
-    sendResponse(res, 500, "Failed", { message: error.message || "Internal server error" });
   }
-});
+);
+
 
 employeeController.put("/reset-password", async (req, res) => {
   try {
@@ -171,5 +228,38 @@ employeeController.delete("/delete/:id", async (req, res) => {
     sendResponse(res, 500, "Failed", { message: error.message || "Internal server error" });
   }
 });
+
+
+// DELETE a specific document of an employee by documentType
+employeeController.delete("/delete-document/:employeeId/:documentTypeId", async (req, res) => {
+  try {
+    const { employeeId, documentTypeId } = req.params;
+
+    const employee = await Employee.findById(employeeId);
+    if (!employee) {
+      return sendResponse(res, 404, "Failed", { message: "Employee not found" });
+    }
+
+    // Filter out the document with the matching documentType
+    const filteredDocs = employee.documents.filter(
+      (doc) => doc.documentType.toString() !== documentTypeId
+    );
+
+    // Update employee documents
+    employee.documents = filteredDocs;
+    await employee.save();
+
+    sendResponse(res, 200, "Success", {
+      message: "Document deleted successfully!",
+      data: employee.documents,
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error("Delete document error:", error);
+    sendResponse(res, 500, "Failed", { message: error.message || "Internal server error" });
+  }
+});
+
+
 
 module.exports = employeeController;

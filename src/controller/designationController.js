@@ -52,7 +52,13 @@ designationController.post("/list", async (req, res) => {
     const sortOption = { [sortField]: sortOrder };
 
     const designationList = await Designation.find(query)
-      .populate("department") // ✅ include department info
+    .populate({
+      path: "department",
+      populate: {
+        path: "branch",
+        select: "branchName",
+      },
+    })
       .sort(sortOption)
       .limit(parseInt(pageCount))
       .skip((pageNo - 1) * parseInt(pageCount));
