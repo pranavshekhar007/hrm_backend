@@ -28,7 +28,7 @@ const terminationSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
-  noticePeriodDate: {
+  noticePeriod: {
     type: String,
   },
   reason: {

@@ -17,7 +17,7 @@ terminationController.post(
         terminationType,
         noticeDate,
         terminationDate,
-        noticePeriodDate,
+        noticePeriod,
         reason,
         description,
       } = req.body;
@@ -27,7 +27,7 @@ terminationController.post(
         terminationType,
         noticeDate,
         terminationDate,
-        noticePeriodDate,
+        noticePeriod,
         reason,
         description,
       };
