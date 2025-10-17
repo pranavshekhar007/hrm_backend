@@ -1,23 +1,44 @@
 const express = require("express");
 const { sendResponse } = require("../utils/common");
 const Announcement = require("../model/announcement.schema");
+const cloudinary = require("../utils/cloudinary");
+const upload = require("../utils/multer");
 require("dotenv").config();
 
 const announcementController = express.Router();
 
-// ✅ Create Announcement
-announcementController.post("/create", async (req, res) => {
-  try {
-    const createdAnnouncement = await Announcement.create(req.body);
-    sendResponse(res, 200, "Success", {
-      message: "Announcement created successfully!",
-      data: createdAnnouncement,
-      statusCode: 200,
-    });
-  } catch (error) {
-    sendResponse(res, 500, "Failed", { message: error.message });
+announcementController.post(
+  "/create",
+  upload.single("attachment"),
+  async (req, res) => {
+    try {
+      let fileData = null;
+      if (req.file) {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: "announcements",
+        });
+        fileData = {
+          fileUrl: result.secure_url,
+        };
+      }
+
+      const announcementData = {
+        ...req.body,
+        attachment: fileData,
+      };
+
+      const createdAnnouncement = await Announcement.create(announcementData);
+
+      sendResponse(res, 200, "Success", {
+        message: "Announcement created successfully!",
+        data: createdAnnouncement,
+        statusCode: 200,
+      });
+    } catch (error) {
+      sendResponse(res, 500, "Failed", { message: error.message });
+    }
   }
-});
+);
 
 // ✅ List Announcements (with filters & pagination)
 announcementController.post("/list", async (req, res) => {
@@ -67,27 +88,48 @@ announcementController.post("/list", async (req, res) => {
   }
 });
 
-// ✅ Update Announcement
-announcementController.put("/update/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const announcement = await Announcement.findById(id);
-    if (!announcement)
-      return sendResponse(res, 404, "Failed", { message: "Announcement not found" });
+announcementController.put(
+  "/update/:id",
+  upload.single("attachment"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
 
-    const updatedAnnouncement = await Announcement.findByIdAndUpdate(id, req.body, {
-      new: true,
-    });
+      // Check if the announcement exists
+      const announcement = await Announcement.findById(id);
+      if (!announcement)
+        return sendResponse(res, 404, "Failed", {
+          message: "Announcement not found",
+        });
 
-    sendResponse(res, 200, "Success", {
-      message: "Announcement updated successfully!",
-      data: updatedAnnouncement,
-      statusCode: 200,
-    });
-  } catch (error) {
-    sendResponse(res, 500, "Failed", { message: error.message });
+      // Upload new file if provided
+      if (req.file) {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: "announcements",
+        });
+        req.body.attachment = {
+          fileUrl: result.secure_url,
+        };
+      }
+
+      const updatedAnnouncement = await Announcement.findByIdAndUpdate(
+        id,
+        req.body,
+        {
+          new: true,
+        }
+      );
+
+      sendResponse(res, 200, "Success", {
+        message: "Announcement updated successfully!",
+        data: updatedAnnouncement,
+        statusCode: 200,
+      });
+    } catch (error) {
+      sendResponse(res, 500, "Failed", { message: error.message });
+    }
   }
-});
+);
 
 // ✅ Delete Announcement
 announcementController.delete("/delete/:id", async (req, res) => {
@@ -95,7 +137,9 @@ announcementController.delete("/delete/:id", async (req, res) => {
     const { id } = req.params;
     const announcement = await Announcement.findById(id);
     if (!announcement)
-      return sendResponse(res, 404, "Failed", { message: "Announcement not found" });
+      return sendResponse(res, 404, "Failed", {
+        message: "Announcement not found",
+      });
 
     await Announcement.findByIdAndDelete(id);
 
@@ -116,7 +160,9 @@ announcementController.put("/change-status/:id", async (req, res) => {
 
     const announcement = await Announcement.findById(id);
     if (!announcement)
-      return sendResponse(res, 404, "Failed", { message: "Announcement not found" });
+      return sendResponse(res, 404, "Failed", {
+        message: "Announcement not found",
+      });
 
     announcement.status = status;
     const updatedAnnouncement = await announcement.save();

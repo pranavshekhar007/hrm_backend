@@ -27,12 +27,10 @@ const announcementSchema = mongoose.Schema({
     type: Date,
     required: true,
   },
-  attachments: [
+  attachment:
     {
       fileUrl: { type: String },
-      fileName: { type: String },
     },
-  ],
   featuredAnnouncement: {
     type: Boolean,
     default: false,
