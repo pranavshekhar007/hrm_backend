@@ -131,7 +131,6 @@ announcementController.put(
   }
 );
 
-// ✅ Delete Announcement
 announcementController.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
