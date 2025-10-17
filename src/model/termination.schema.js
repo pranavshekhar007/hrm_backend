@@ -42,6 +42,23 @@ const terminationSchema = new mongoose.Schema({
   documents: {
     type: String,
   },
+  status: {
+    type: String,
+    enum: ["Pending", "Approved", "Rejected", "Withdrawn"],
+    default: "Pending",
+  },
+  exitInterviewConducted: {
+    type: String,
+    enum: ["Yes", "No", "Scheduled"],
+    default: "No",
+  },
+  exitInterviewDate: {
+    type: Date,
+  },
+  exitFeedback: {
+    type: String,
+    trim: true,
+  },
 });
 
 terminationSchema.plugin(timestamps);
