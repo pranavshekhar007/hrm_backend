@@ -207,31 +207,44 @@ employeeController.put(
 
 employeeController.put("/reset-password", async (req, res) => {
   try {
-    const { employeeId, newPassword } = req.body;
-    const employee = await Employee.findOne({ employeeId });
+    const { employeeId, newPassword, confirmPassword } = req.body;
 
-    if (!employee) {
-      return sendResponse(res, 404, "Failed", {
-        message: "Employee not found",
+    if (!employeeId || !newPassword || !confirmPassword) {
+      return sendResponse(res, 422, "Failed", {
+        message: "employeeId, newPassword and confirmPassword are required",
       });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
-    employee.password = hashedPassword;
+    if (newPassword !== confirmPassword) {
+      return sendResponse(res, 422, "Failed", {
+        message: "Passwords do not match",
+      });
+    }
 
+    const employee = await Employee.findById(employeeId);
+    if (!employee) {
+      return sendResponse(res, 404, "Failed", { message: "Employee not found" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    employee.password = hashedPassword;
     await employee.save();
 
     sendResponse(res, 200, "Success", {
-      message: "Password reset successfully!",
-      statusCode: 200,
+      message: "Password updated successfully",
+      data: {
+        _id: employee._id,
+        fullName: employee.fullName,
+        email: employee.email,
+      },
     });
   } catch (error) {
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal server error",
-    });
+    console.error(error);
+    sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
+
 
 employeeController.delete("/delete/:id", async (req, res) => {
   try {
@@ -291,5 +304,33 @@ employeeController.delete(
     }
   }
 );
+
+employeeController.get("/details/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find employee by ID and populate relations
+    const employee = await Employee.findById(id)
+      .populate("branch department designation documents.documentType");
+
+    if (!employee) {
+      return sendResponse(res, 404, "Failed", {
+        message: "Employee not found",
+      });
+    }
+
+    sendResponse(res, 200, "Success", {
+      message: "Employee details fetched successfully!",
+      data: employee,
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error("Employee details error:", error);
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+    });
+  }
+});
+
 
 module.exports = employeeController;
