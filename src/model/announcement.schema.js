@@ -9,7 +9,6 @@ const announcementSchema = mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ["CompanyNews", "PolicyUpdates", "Events", "HR", "ITUpdates"],
     required: true,
   },
   shortDescription: {

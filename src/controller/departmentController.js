@@ -118,4 +118,37 @@ departmentController.delete("/delete/:id", async (req, res) => {
   }
 });
 
+departmentController.get("/by-branch/:branchId", async (req, res) => {
+  try {
+    const { branchId } = req.params;
+
+    if (!branchId) {
+      return sendResponse(res, 400, "Failed", {
+        message: "Branch ID is required",
+      });
+    }
+
+    const departments = await Department.find({ branch: branchId, status: true })
+      .populate("branch", "branchName")
+      .sort({ createdAt: -1 });
+
+    if (!departments.length) {
+      return sendResponse(res, 404, "Failed", {
+        message: "No departments found for this branch",
+      });
+    }
+
+    sendResponse(res, 200, "Success", {
+      message: "Departments fetched successfully!",
+      data: departments,
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error("Error in getDepartmentsByBranch:", error);
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+    });
+  }
+});
+
 module.exports = departmentController;

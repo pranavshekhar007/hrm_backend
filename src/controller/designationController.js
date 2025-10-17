@@ -130,4 +130,45 @@ designationController.delete("/delete/:id", async (req, res) => {
   }
 });
 
+// ✅ Get Designations by Department ID
+designationController.get("/by-department/:departmentId", async (req, res) => {
+  try {
+    const { departmentId } = req.params;
+
+    if (!departmentId) {
+      return sendResponse(res, 400, "Failed", {
+        message: "Department ID is required",
+      });
+    }
+
+    const designations = await Designation.find({ department: departmentId, status: true })
+      .populate({
+        path: "department",
+        populate: {
+          path: "branch",
+          select: "branchName",
+        },
+      })
+      .sort({ createdAt: -1 });
+
+    if (!designations.length) {
+      return sendResponse(res, 404, "Failed", {
+        message: "No designations found for this department",
+      });
+    }
+
+    sendResponse(res, 200, "Success", {
+      message: "Designations fetched successfully!",
+      data: designations,
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error("Error in getDesignationsByDepartment:", error);
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+    });
+  }
+});
+
+
 module.exports = designationController;
