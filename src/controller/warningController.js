@@ -4,10 +4,12 @@ require("dotenv").config();
 const Warning = require("../model/warning.schema");
 const Employee = require("../model/employee.schema");
 const warningController = express.Router();
+const cloudinary = require("../utils/cloudinary");
+const upload = require("../utils/multer");
 
-warningController.post("/create", async (req, res) => {
+warningController.post("/create", upload.single("document"), async (req, res) => {
   try {
-    const { employee, warningBy } = req.body;
+    const { employee, warningBy, ...rest } = req.body;
 
     const employeeExists = await Employee.findById(employee);
     if (!employeeExists)
@@ -17,7 +19,20 @@ warningController.post("/create", async (req, res) => {
     if (!warningByExists)
       return sendResponse(res, 400, "Failed", { message: "Invalid warningBy employee ID" });
 
-    const createdWarning = await Warning.create(req.body);
+    let documentData = {};
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: "warnings",
+      });
+      documentData = { fileUrl: result.secure_url, fileName: req.file.originalname };
+    }
+
+    const createdWarning = await Warning.create({
+      employee,
+      warningBy,
+      ...rest,
+      document: documentData,
+    });
 
     sendResponse(res, 200, "Success", {
       message: "Warning created successfully!",
@@ -73,15 +88,27 @@ warningController.post("/list", async (req, res) => {
   }
 });
 
-warningController.put("/update", async (req, res) => {
+warningController.put("/update", upload.single("document"), async (req, res) => {
   try {
-    const { _id } = req.body;
+    const { _id, ...rest } = req.body;
 
     const existingWarning = await Warning.findById(_id);
     if (!existingWarning)
       return sendResponse(res, 404, "Failed", { message: "Warning not found" });
 
-    const updatedWarning = await Warning.findByIdAndUpdate(_id, req.body, { new: true });
+    let documentData = existingWarning.document; // keep old document by default
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: "warnings",
+      });
+      documentData = { fileUrl: result.secure_url, fileName: req.file.originalname };
+    }
+
+    const updatedWarning = await Warning.findByIdAndUpdate(
+      _id,
+      { ...rest, document: documentData },
+      { new: true }
+    );
 
     sendResponse(res, 200, "Success", {
       message: "Warning updated successfully!",

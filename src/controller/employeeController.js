@@ -132,36 +132,42 @@ employeeController.put(
 
       if (req.files?.documents?.length > 0 && req.body.documentsData) {
         const documentsData = JSON.parse(req.body.documentsData);
-
-        for (let i = 0; i < req.files.documents.length; i++) {
-          const file = req.files.documents[i];
-          const uploaded = await cloudinary.uploader.upload(file.path);
-
-          const docTypeId = documentsData[i].documentType;
-          const expiryDate = documentsData[i].expiryDate;
-
-          // Find existing document by documentType
-          const existingIndex = updatedDocs.findIndex(
-            (doc) => doc.documentType.toString() === docTypeId
-          );
-
-          if (existingIndex !== -1) {
-            // Only update fileUrl and expiryDate, NOT documentType
-            updatedDocs[existingIndex] = {
-              ...updatedDocs[existingIndex].toObject(),
-              fileUrl: uploaded.url,
-              expiryDate: expiryDate,
-            };
-          } else {
-            // Add new document if it doesn't exist
+      
+        let fileIndex = 0; // To match files with documentData
+        for (let i = 0; i < documentsData.length; i++) {
+          const docData = documentsData[i];
+      
+          let uploadedUrl = docData.documentUrl || null;
+          if (docData.file || req.files.documents[fileIndex]) {
+            const file = req.files.documents[fileIndex];
+            const uploaded = await cloudinary.uploader.upload(file.path);
+            uploadedUrl = uploaded.url;
+            fileIndex++;
+          }
+      
+          // Push every document as new if _id is null
+          if (!docData._id) {
             updatedDocs.push({
-              documentType: docTypeId,
-              fileUrl: uploaded.url,
-              expiryDate: expiryDate,
+              documentType: docData.documentType,
+              fileUrl: uploadedUrl,
+              expiryDate: docData.expiryDate,
             });
+          } else {
+            // Update existing document
+            const existingIndex = updatedDocs.findIndex(
+              (doc) => doc._id.toString() === docData._id
+            );
+            if (existingIndex !== -1) {
+              updatedDocs[existingIndex] = {
+                ...updatedDocs[existingIndex].toObject(),
+                fileUrl: uploadedUrl,
+                expiryDate: docData.expiryDate,
+              };
+            }
           }
         }
       }
+      
 
       req.body.documents = updatedDocs;
 
@@ -253,7 +259,6 @@ employeeController.delete("/delete/:id", async (req, res) => {
   }
 });
 
-// DELETE a specific document of an employee by documentType
 employeeController.delete(
   "/delete-document/:employeeId/:documentTypeId",
   async (req, res) => {
@@ -267,12 +272,15 @@ employeeController.delete(
         });
       }
 
-      // Filter out the document with the matching documentType
-      const filteredDocs = employee.documents.filter(
-        (doc) => doc.documentType.toString() !== documentTypeId
-      );
+      // Safely filter out documentType
+      const filteredDocs = employee.documents.filter((doc) => {
+        const docTypeId =
+          doc?.documentType?._id?.toString?.() ||
+          doc?.documentType?.toString?.() ||
+          null;
+        return docTypeId !== documentTypeId;
+      });
 
-      // Update employee documents
       employee.documents = filteredDocs;
       await employee.save();
 
