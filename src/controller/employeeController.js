@@ -110,35 +110,28 @@ employeeController.post("/list", async (req, res) => {
 });
 
 employeeController.put(
-  "/update/:id",
+  "/update",
   upload.fields([
     { name: "profileImage", maxCount: 1 },
     { name: "documents", maxCount: 10 },
   ]),
   async (req, res) => {
     try {
-      const id = req.params.id;
+      const id = req.params.id || req.body._id;
       const employeeData = await Employee.findById(id);
       if (!employeeData) {
         return sendResponse(res, 404, "Failed", { message: "Employee not found" });
       }
 
-      // --------------------------
-      // Update profile image if provided
-      // --------------------------
       if (req.files?.profileImage) {
         const uploaded = await cloudinary.uploader.upload(req.files.profileImage[0].path);
         req.body.profileImage = uploaded.url;
       }
-
-      // --------------------------
-      // Handle documents update
-      // --------------------------
       const currentDocs = employeeData.documents || [];
       const updatedDocs = [...currentDocs];
 
       if (req.files?.documents?.length > 0 && req.body.documentsData) {
-        const documentsData = JSON.parse(req.body.documentsData); // array of {documentType, expiryDate}
+        const documentsData = JSON.parse(req.body.documentsData);
 
         for (let i = 0; i < req.files.documents.length; i++) {
           const file = req.files.documents[i];

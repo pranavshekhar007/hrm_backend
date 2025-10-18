@@ -44,7 +44,7 @@ const warningSchema = mongoose.Schema({
     type: String,
     trim: true,
   },
-  documents: {
+  document: {
     fileUrl: { type: String },
     fileName: { type: String },
   },
@@ -77,6 +77,9 @@ const warningSchema = mongoose.Schema({
     type: String,
     trim: true,
   },
+  improvementPlanProgress: {
+    type: String,
+  }
 });
 
 warningSchema.plugin(timestamps);
