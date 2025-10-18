@@ -5,29 +5,45 @@ const Employee = require("../model/employee.schema");
 const Branch = require("../model/branch.schema");
 const Department = require("../model/department.schema");
 const Designation = require("../model/designation.schema");
+const cloudinary = require("../utils/cloudinary");
+const upload = require("../utils/multer"); 
 
 const transferController = express.Router();
 
 // ✅ Create Transfer Request
-transferController.post("/create", async (req, res) => {
+transferController.post("/create", upload.array("documents"), async (req, res) => {
   try {
-    const { employee, branch, toDepartment, toDesignation } = req.body;
+    const { employee, branch, toDepartment, toDesignation, transferDate, effectiveDate, reason } = req.body;
 
     const employeeExists = await Employee.findById(employee);
     const branchExists = await Branch.findById(branch);
     const departmentExists = await Department.findById(toDepartment);
     const designationExists = await Designation.findById(toDesignation);
 
-    if (!employeeExists)
-      return sendResponse(res, 400, "Failed", { message: "Invalid employee ID" });
-    if (!branchExists)
-      return sendResponse(res, 400, "Failed", { message: "Invalid branch ID" });
-    if (!departmentExists)
-      return sendResponse(res, 400, "Failed", { message: "Invalid department ID" });
-    if (!designationExists)
-      return sendResponse(res, 400, "Failed", { message: "Invalid designation ID" });
+    if (!employeeExists) return sendResponse(res, 400, "Failed", { message: "Invalid employee ID" });
+    if (!branchExists) return sendResponse(res, 400, "Failed", { message: "Invalid branch ID" });
+    if (!departmentExists) return sendResponse(res, 400, "Failed", { message: "Invalid department ID" });
+    if (!designationExists) return sendResponse(res, 400, "Failed", { message: "Invalid designation ID" });
 
-    const newTransfer = await Transfer.create(req.body);
+    // Upload documents to Cloudinary
+    let documents = [];
+    if (req.files && req.files.length > 0) {
+      for (let file of req.files) {
+        const result = await cloudinary.uploader.upload(file.path, { folder: "transfer_documents" });
+        documents.push({ fileUrl: result.secure_url, fileName: file.originalname });
+      }
+    }
+
+    const newTransfer = await Transfer.create({
+      employee,
+      branch,
+      toDepartment,
+      toDesignation,
+      transferDate,
+      effectiveDate,
+      reason,
+      documents
+    });
 
     sendResponse(res, 200, "Success", {
       message: "Transfer request created successfully",
@@ -38,6 +54,7 @@ transferController.post("/create", async (req, res) => {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
 
 // ✅ List Transfers with pagination, filter, and search
 transferController.post("/list", async (req, res) => {
@@ -75,15 +92,30 @@ transferController.post("/list", async (req, res) => {
 });
 
 // ✅ Update Transfer Details
-transferController.put("/update/:id", async (req, res) => {
+transferController.put("/update/:id", upload.array("documents"), async (req, res) => {
   try {
     const { id } = req.params;
-
     const transfer = await Transfer.findById(id);
-    if (!transfer)
-      return sendResponse(res, 404, "Failed", { message: "Transfer not found" });
+    if (!transfer) return sendResponse(res, 404, "Failed", { message: "Transfer not found" });
 
-    Object.assign(transfer, req.body);
+    // Upload new documents if provided
+    if (req.files && req.files.length > 0) {
+      for (let file of req.files) {
+        const result = await cloudinary.uploader.upload(file.path, { folder: "transfer_documents" });
+        transfer.documents.push({ fileUrl: result.secure_url, fileName: file.originalname });
+      }
+    }
+
+    // Update other fields
+    const { employee, branch, toDepartment, toDesignation, transferDate, effectiveDate, reason, status } = req.body;
+    if (employee) transfer.employee = employee;
+    if (branch) transfer.branch = branch;
+    if (toDepartment) transfer.toDepartment = toDepartment;
+    if (toDesignation) transfer.toDesignation = toDesignation;
+    if (transferDate) transfer.transferDate = transferDate;
+    if (effectiveDate) transfer.effectiveDate = effectiveDate;
+    if (reason) transfer.reason = reason;
+    if (status) transfer.status = status;
 
     const updatedTransfer = await transfer.save();
 

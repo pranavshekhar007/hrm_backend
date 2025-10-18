@@ -110,72 +110,67 @@ employeeController.post("/list", async (req, res) => {
 });
 
 employeeController.put(
-  "/update",
+  "/update/:id",
   upload.fields([
     { name: "profileImage", maxCount: 1 },
     { name: "documents", maxCount: 10 },
   ]),
   async (req, res) => {
     try {
-      const id = req.params.id || req.body._id;
+      const id = req.params.id;
       const employeeData = await Employee.findById(id);
-      if (!employeeData)
-        return sendResponse(res, 404, "Failed", {
-          message: "Employee not found",
-        });
+      if (!employeeData) {
+        return sendResponse(res, 404, "Failed", { message: "Employee not found" });
+      }
 
       // --------------------------
-      // Handle profile image update
+      // Update profile image if provided
       // --------------------------
       if (req.files?.profileImage) {
-        const uploaded = await cloudinary.uploader.upload(
-          req.files.profileImage[0].path
-        );
+        const uploaded = await cloudinary.uploader.upload(req.files.profileImage[0].path);
         req.body.profileImage = uploaded.url;
       }
 
       // --------------------------
-      // Handle documents merge/update
+      // Handle documents update
       // --------------------------
-      if (req.files?.documents?.length > 0) {
-        const currentDocs = employeeData.documents || []; // existing documents
-        const updatedDocs = [...currentDocs];
+      const currentDocs = employeeData.documents || [];
+      const updatedDocs = [...currentDocs];
 
-        const documentTypeArray = Array.isArray(req.body.documentType)
-          ? req.body.documentType
-          : [req.body.documentType];
-        const expiryDateArray = Array.isArray(req.body.expiryDate)
-          ? req.body.expiryDate
-          : [req.body.expiryDate];
+      if (req.files?.documents?.length > 0 && req.body.documentsData) {
+        const documentsData = JSON.parse(req.body.documentsData); // array of {documentType, expiryDate}
 
         for (let i = 0; i < req.files.documents.length; i++) {
           const file = req.files.documents[i];
           const uploaded = await cloudinary.uploader.upload(file.path);
 
-          const docData = {
-            fileUrl: uploaded.url,
-            documentType: documentTypeArray[i],
-            expiryDate: expiryDateArray[i],
-          };
+          const docTypeId = documentsData[i].documentType;
+          const expiryDate = documentsData[i].expiryDate;
 
+          // Find existing document by documentType
           const existingIndex = updatedDocs.findIndex(
-            (doc) => doc.documentType.toString() === documentTypeArray[i]
+            (doc) => doc.documentType.toString() === docTypeId
           );
 
           if (existingIndex !== -1) {
-            // Update existing document
+            // Only update fileUrl and expiryDate, NOT documentType
             updatedDocs[existingIndex] = {
-              ...updatedDocs[existingIndex],
-              ...docData,
+              ...updatedDocs[existingIndex].toObject(),
+              fileUrl: uploaded.url,
+              expiryDate: expiryDate,
             };
           } else {
-            // Add new document
-            updatedDocs.push(docData);
+            // Add new document if it doesn't exist
+            updatedDocs.push({
+              documentType: docTypeId,
+              fileUrl: uploaded.url,
+              expiryDate: expiryDate,
+            });
           }
         }
-
-        req.body.documents = updatedDocs;
       }
+
+      req.body.documents = updatedDocs;
 
       // --------------------------
       // Handle password hash
@@ -188,9 +183,7 @@ employeeController.put(
       // --------------------------
       // Update employee
       // --------------------------
-      const updatedEmployee = await Employee.findByIdAndUpdate(id, req.body, {
-        new: true,
-      });
+      const updatedEmployee = await Employee.findByIdAndUpdate(id, req.body, { new: true });
       sendResponse(res, 200, "Success", {
         message: "Employee updated successfully!",
         data: updatedEmployee,
@@ -198,12 +191,11 @@ employeeController.put(
       });
     } catch (error) {
       console.error("Employee update error:", error);
-      sendResponse(res, 500, "Failed", {
-        message: error.message || "Internal server error",
-      });
+      sendResponse(res, 500, "Failed", { message: error.message || "Internal server error" });
     }
   }
 );
+
 
 employeeController.put("/reset-password", async (req, res) => {
   try {
