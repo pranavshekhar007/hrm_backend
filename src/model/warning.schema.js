@@ -44,10 +44,10 @@ const warningSchema = mongoose.Schema({
     type: String,
     trim: true,
   },
-  documents: [{
+  documents: {
     fileUrl: { type: String },
     fileName: { type: String },
-  }],
+  },
   expiryDate: {
     type: Date,
   },
