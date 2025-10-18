@@ -117,7 +117,7 @@ employeeController.put(
   ]),
   async (req, res) => {
     try {
-      const id = req.body._id;
+      const id = req.params.id || req.body._id;
       const employeeData = await Employee.findById(id);
       if (!employeeData)
         return sendResponse(res, 404, "Failed", {
