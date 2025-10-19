@@ -48,24 +48,15 @@ transferController.post("/create", upload.single("document"), async (req, res) =
       document,
     });
 
-    // ✅ Update Employee to include this transfer
-    await Employee.findByIdAndUpdate(employee, {
-      $push: { transfers: newTransfer._id },
-      $set: {
-        branch: toBranch,
-        department: toDepartment,
-        designation: toDesignation,
-      },
-    });
-
     sendResponse(res, 200, "Success", {
-      message: "Transfer created and linked to employee successfully!",
+      message: "Transfer request created successfully",
       data: newTransfer,
     });
   } catch (error) {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
 
 
 
@@ -143,24 +134,43 @@ transferController.put("/update/:id", upload.single("document"), async (req, res
 });
 
 
-// ✅ Change Transfer Status (Pending → Approved/Rejected)
 transferController.put("/change-status/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    const transfer = await Transfer.findById(id);
-    if (!transfer)
-      return sendResponse(res, 404, "Failed", { message: "Transfer not found" });
-
     if (!["Pending", "Approved", "Rejected"].includes(status))
       return sendResponse(res, 400, "Failed", { message: "Invalid status" });
 
+    const transfer = await Transfer.findById(id)
+      .populate("employee fromBranch fromDepartment fromDesignation toBranch toDepartment toDesignation");
+
+    if (!transfer)
+      return sendResponse(res, 404, "Failed", { message: "Transfer not found" });
+
+    // Only update employee details if Approved
+    if (status === "Approved") {
+      const employee = transfer.employee;
+
+      // Update employee current branch/department/designation
+      employee.branch = transfer.toBranch;
+      employee.department = transfer.toDepartment;
+      employee.designation = transfer.toDesignation;
+
+      // Add transfer to employee's transfers array if not already present
+      if (!employee.transfers.includes(transfer._id)) {
+        employee.transfers.push(transfer._id);
+      }
+
+      await employee.save();
+    }
+
+    // Update transfer status
     transfer.status = status;
     const updatedTransfer = await transfer.save();
 
     sendResponse(res, 200, "Success", {
-      message: "Transfer status updated successfully",
+      message: `Transfer status updated to ${status} successfully`,
       data: updatedTransfer,
       statusCode: 200,
     });
@@ -168,6 +178,7 @@ transferController.put("/change-status/:id", async (req, res) => {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
 
 // ✅ Delete Transfer
 transferController.delete("/delete/:id", async (req, res) => {
