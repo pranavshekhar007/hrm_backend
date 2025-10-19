@@ -71,6 +71,13 @@ const employeeSchema = new mongoose.Schema({
       },
     },
   ],
+  transfers: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Transfer",
+    },
+  ],
+
 });
 employeeSchema.plugin(timestamps);
 module.exports = mongoose.model("Employee", employeeSchema);

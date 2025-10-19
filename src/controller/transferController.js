@@ -10,45 +10,57 @@ const upload = require("../utils/multer");
 
 const transferController = express.Router();
 
-// ✅ Create Transfer Request
-transferController.post("/create", upload.array("documents"), async (req, res) => {
+transferController.post("/create", upload.single("document"), async (req, res) => {
   try {
-    const { employee, branch, toDepartment, toDesignation, transferDate, effectiveDate, reason } = req.body;
+    const { employee, toBranch, toDepartment, toDesignation, transferDate, effectiveDate, reason } = req.body;
 
-    const employeeExists = await Employee.findById(employee);
-    const branchExists = await Branch.findById(branch);
+    const employeeExists = await Employee.findById(employee)
+      .populate("branch department designation");
+    if (!employeeExists)
+      return sendResponse(res, 400, "Failed", { message: "Invalid employee ID" });
+
+    const branchExists = await Branch.findById(toBranch);
     const departmentExists = await Department.findById(toDepartment);
     const designationExists = await Designation.findById(toDesignation);
 
-    if (!employeeExists) return sendResponse(res, 400, "Failed", { message: "Invalid employee ID" });
     if (!branchExists) return sendResponse(res, 400, "Failed", { message: "Invalid branch ID" });
     if (!departmentExists) return sendResponse(res, 400, "Failed", { message: "Invalid department ID" });
     if (!designationExists) return sendResponse(res, 400, "Failed", { message: "Invalid designation ID" });
 
-    // Upload documents to Cloudinary
-    let documents = [];
-    if (req.files && req.files.length > 0) {
-      for (let file of req.files) {
-        const result = await cloudinary.uploader.upload(file.path, { folder: "transfer_documents" });
-        documents.push({ fileUrl: result.secure_url, fileName: file.originalname });
-      }
+    let document = {};
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, { folder: "transfer_documents" });
+      document = { fileUrl: result.secure_url, fileName: req.file.originalname };
     }
 
+    // ✅ Create transfer
     const newTransfer = await Transfer.create({
       employee,
-      branch,
+      fromBranch: employeeExists.branch,
+      fromDepartment: employeeExists.department,
+      fromDesignation: employeeExists.designation,
+      toBranch,
       toDepartment,
       toDesignation,
       transferDate,
       effectiveDate,
       reason,
-      documents
+      document,
+    });
+
+    // ✅ Update Employee to include this transfer
+    await Employee.findByIdAndUpdate(employee, {
+      $push: { transfers: newTransfer._id },
+      $set: {
+        branch: toBranch,
+        department: toDepartment,
+        designation: toDesignation,
+      },
     });
 
     sendResponse(res, 200, "Success", {
-      message: "Transfer request created successfully",
+      message: "Transfer created and linked to employee successfully!",
       data: newTransfer,
-      statusCode: 200,
     });
   } catch (error) {
     sendResponse(res, 500, "Failed", { message: error.message });
@@ -56,7 +68,7 @@ transferController.post("/create", upload.array("documents"), async (req, res) =
 });
 
 
-// ✅ List Transfers with pagination, filter, and search
+
 transferController.post("/list", async (req, res) => {
   try {
     const { searchKey = "", pageNo = 1, pageCount = 10, status } = req.body;
@@ -71,8 +83,11 @@ transferController.post("/list", async (req, res) => {
 
     const transfers = await Transfer.find(query)
       .populate("employee", "fullName email")
-      .populate("branch", "branchName")
+      .populate("fromBranch", "branchName")
+      .populate("toBranch", "branchName")
+      .populate("fromDepartment", "name")
       .populate("toDepartment", "name")
+      .populate("fromDesignation", "name")
       .populate("toDesignation", "name")
       .limit(parseInt(pageCount))
       .skip((pageNo - 1) * parseInt(pageCount))
@@ -91,19 +106,17 @@ transferController.post("/list", async (req, res) => {
   }
 });
 
-// ✅ Update Transfer Details
-transferController.put("/update/:id", upload.array("documents"), async (req, res) => {
+
+transferController.put("/update/:id", upload.single("document"), async (req, res) => {
   try {
     const { id } = req.params;
     const transfer = await Transfer.findById(id);
     if (!transfer) return sendResponse(res, 404, "Failed", { message: "Transfer not found" });
 
-    // Upload new documents if provided
-    if (req.files && req.files.length > 0) {
-      for (let file of req.files) {
-        const result = await cloudinary.uploader.upload(file.path, { folder: "transfer_documents" });
-        transfer.documents.push({ fileUrl: result.secure_url, fileName: file.originalname });
-      }
+    // ✅ Handle single file upload (replace existing)
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, { folder: "transfer_documents" });
+      transfer.document = { fileUrl: result.secure_url, fileName: req.file.originalname };
     }
 
     // Update other fields
@@ -128,6 +141,7 @@ transferController.put("/update/:id", upload.array("documents"), async (req, res
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
 
 // ✅ Change Transfer Status (Pending → Approved/Rejected)
 transferController.put("/change-status/:id", async (req, res) => {

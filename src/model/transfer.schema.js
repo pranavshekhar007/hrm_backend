@@ -7,7 +7,22 @@ const transferSchema = mongoose.Schema({
     ref: "Employee",
     required: true,
   },
-  branch: {
+  fromBranch: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Branch",
+    required: true,
+  },
+  fromDepartment: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Department",
+    required: true,
+  },
+  fromDesignation: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Designation",
+    required: true,
+  },
+  toBranch: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Branch",
     required: true,

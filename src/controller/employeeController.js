@@ -301,29 +301,22 @@ employeeController.delete(
 employeeController.get("/details/:id", async (req, res) => {
   try {
     const { id } = req.params;
-
-    // Find employee by ID and populate relations
     const employee = await Employee.findById(id)
-      .populate("branch department designation documents.documentType");
+      .populate("branch department designation documents.documentType transfers");
 
     if (!employee) {
-      return sendResponse(res, 404, "Failed", {
-        message: "Employee not found",
-      });
+      return sendResponse(res, 404, "Failed", { message: "Employee not found" });
     }
 
     sendResponse(res, 200, "Success", {
       message: "Employee details fetched successfully!",
       data: employee,
-      statusCode: 200,
     });
   } catch (error) {
-    console.error("Employee details error:", error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal server error",
-    });
+    sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
 
 
 module.exports = employeeController;
