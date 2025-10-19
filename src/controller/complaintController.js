@@ -3,30 +3,59 @@ const { sendResponse } = require("../utils/common");
 const Complaint = require("../model/complaint.schema");
 const Employee = require("../model/employee.schema");
 const complaintController = express.Router();
+const cloudinary = require("../utils/cloudinary");
+const upload = require("../utils/multer");
 
-complaintController.post("/create", async (req, res) => {
-  try {
-    const { employee, against, submitAnonymously } = req.body;
+complaintController.post(
+  "/create",
+  upload.single("documents"),
+  async (req, res) => {
+    try {
+      const { employee, against, submitAnonymously } = req.body;
 
-    const employeeExists = await Employee.findById(employee);
-    const againstExists = await Employee.findById(against);
+      // Validate employee IDs
+      const employeeExists =
+        submitAnonymously || (await Employee.findById(employee));
+      const againstExists = await Employee.findById(against);
 
-    if (!employeeExists && !submitAnonymously)
-      return sendResponse(res, 400, "Failed", { message: "Invalid employee ID" });
-    if (!againstExists)
-      return sendResponse(res, 400, "Failed", { message: "Invalid against employee ID" });
+      if (!employeeExists)
+        return sendResponse(res, 400, "Failed", {
+          message: "Invalid employee ID",
+        });
+      if (!againstExists)
+        return sendResponse(res, 400, "Failed", {
+          message: "Invalid against employee ID",
+        });
 
-    const createdComplaint = await Complaint.create(req.body);
+      const complaintData = { ...req.body };
 
-    sendResponse(res, 200, "Success", {
-      message: "Complaint submitted successfully",
-      data: createdComplaint,
-      statusCode: 200,
-    });
-  } catch (error) {
-    sendResponse(res, 500, "Failed", { message: error.message });
+      // Handle file upload if present
+      if (req.file) {
+        const uploadedDoc = await cloudinary.uploader.upload(req.file.path, {
+          folder: "complaints",
+        });
+        complaintData.documents = {
+          fileUrl: uploadedDoc.secure_url,
+          fileName: req.file.originalname,
+        };
+      }
+
+      const createdComplaint = await Complaint.create(complaintData);
+
+      sendResponse(res, 200, "Success", {
+        message: "Complaint submitted successfully",
+        data: createdComplaint,
+        statusCode: 200,
+      });
+    } catch (error) {
+      console.error(error);
+      sendResponse(res, 500, "Failed", {
+        message: error.message || "Internal server error",
+      });
+    }
   }
-});
+);
+
 
 complaintController.post("/list", async (req, res) => {
   try {
@@ -62,26 +91,46 @@ complaintController.post("/list", async (req, res) => {
   }
 });
 
-complaintController.put("/update/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const complaint = await Complaint.findById(id);
-    if (!complaint)
-      return sendResponse(res, 404, "Failed", { message: "Complaint not found" });
+complaintController.put(
+  "/update/:id",
+  upload.single("documents"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const complaint = await Complaint.findById(id);
+      if (!complaint)
+        return sendResponse(res, 404, "Failed", {
+          message: "Complaint not found",
+        });
 
-    Object.assign(complaint, req.body);
+      const updatedData = { ...req.body };
 
-    const updatedComplaint = await complaint.save();
+      if (req.file) {
+        const uploadedDoc = await cloudinary.uploader.upload(req.file.path, {
+          folder: "complaints",
+        });
+        updatedData.documents = {
+          fileUrl: uploadedDoc.secure_url,
+          fileName: req.file.originalname,
+        };
+      }
 
-    sendResponse(res, 200, "Success", {
-      message: "Complaint updated successfully",
-      data: updatedComplaint,
-      statusCode: 200,
-    });
-  } catch (error) {
-    sendResponse(res, 500, "Failed", { message: error.message });
+      const updatedComplaint = await Complaint.findByIdAndUpdate(id, updatedData, {
+        new: true,
+      });
+
+      sendResponse(res, 200, "Success", {
+        message: "Complaint updated successfully",
+        data: updatedComplaint,
+        statusCode: 200,
+      });
+    } catch (error) {
+      console.error(error);
+      sendResponse(res, 500, "Failed", { message: error.message });
+    }
   }
-});
+);
+
 
 complaintController.put("/change-status/:id", async (req, res) => {
   try {

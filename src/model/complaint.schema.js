@@ -41,10 +41,10 @@ const complaintSchema = mongoose.Schema({
     type: String,
     trim: true,
   },
-  documents: [{
+  documents: {
     fileUrl: { type: String },
     fileName: { type: String },
-  }],
+  },
   submitAnonymously: {
     type: Boolean,
     default: false,
