@@ -33,10 +33,10 @@ const transferSchema = mongoose.Schema({
     type: String,
     trim: true,
   },
-  documents: [{
+  document: {
     fileUrl: { type: String },
     fileName: { type: String },
-  }],
+  },
   status: {
     type: String,
     enum: ["Pending", "Approved", "Rejected"],

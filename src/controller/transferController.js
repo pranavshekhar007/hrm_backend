@@ -71,7 +71,7 @@ transferController.post("/list", async (req, res) => {
 
     const transfers = await Transfer.find(query)
       .populate("employee", "fullName email")
-      .populate("branch", "name")
+      .populate("branch", "branchName")
       .populate("toDepartment", "name")
       .populate("toDesignation", "name")
       .limit(parseInt(pageCount))
