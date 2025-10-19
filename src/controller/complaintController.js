@@ -13,7 +13,6 @@ complaintController.post(
     try {
       const { employee, against, submitAnonymously } = req.body;
 
-      // Validate employee IDs
       const employeeExists =
         submitAnonymously || (await Employee.findById(employee));
       const againstExists = await Employee.findById(against);
