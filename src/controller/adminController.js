@@ -152,44 +152,82 @@ adminController.post("/login", async (req, res) => {
   try {
     const { email, password, deviceId } = req.body;
 
-    const user = await Admin.findOne({ email }).populate({ path: "role" });
+    // Step 1: Find user and populate deeply
+    const user = await Admin.findOne({ email })
+      .populate({
+        path: "role",
+        populate: {
+          path: "permissions.permissionId",
+          model: "Permission",
+        },
+      })
+      .lean();
+
     if (!user) {
-      return sendResponse(res, 422, "Failed", {
-        message: "Invalid Credentials",
-      });
+      return sendResponse(res, 422, "Failed", { message: "Invalid Credentials" });
     }
 
+    // Step 2: Verify password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return sendResponse(res, 422, "Failed", {
-        message: "Invalid Credentials",
-      });
+      return sendResponse(res, 422, "Failed", { message: "Invalid Credentials" });
     }
 
+    // Step 3: Generate token
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
+      { id: user._id, email: user.email, role: user.role?._id },
       process.env.JWT_KEY
     );
 
+    // Step 4: Update deviceId
     const updatedAdmin = await Admin.findByIdAndUpdate(
       user._id,
       { deviceId },
       { new: true }
-    ).populate({ path: "role" });
+    )
+      .populate({
+        path: "role",
+        populate: {
+          path: "permissions.permissionId",
+          model: "Permission",
+        },
+      })
+      .lean();
 
+    // Step 5: Transform permissions (keep selectedActions from DB)
+    const transformedRole = {
+      ...updatedAdmin.role,
+      permissions: updatedAdmin.role.permissions.map((perm) => ({
+        ...perm,
+        // ✅ keep real selectedActions if present, fallback to empty []
+        selectedActions: perm.selectedActions && perm.selectedActions.length
+          ? perm.selectedActions
+          : perm.actions || [], // if still not present, fallback to actions
+        // Optional: remove raw `actions` if not needed
+        actions: undefined,
+      })),
+    };
+
+    // Step 6: Send response
     return sendResponse(res, 200, "Success", {
       message: "User logged in successfully",
-      data: updatedAdmin,
+      data: {
+        ...updatedAdmin,
+        role: transformedRole,
+      },
       token,
       statusCode: 200,
     });
   } catch (error) {
+    console.error(error);
     return sendResponse(res, 500, "Failed", {
       message: error.message || "Internal server error",
       statusCode: 500,
     });
   }
 });
+
+
 
 adminController.post("/list", async (req, res) => {
   try {

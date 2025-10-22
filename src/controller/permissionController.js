@@ -7,10 +7,9 @@ const auth = require("../utils/auth");
 
 permissionController.post("/create", async (req, res) => {
   try {
-    const { name, module, actions } = req.body;
+    const { module, actions } = req.body;
 
     const permissionCreated = await Permission.create({
-      name,
       module,
       actions: actions && actions.length ? actions : undefined,
       description: req.body.description || "",
@@ -45,10 +44,10 @@ permissionController.post("/list", async (req, res) => {
     const query = {};
     if (module) query.module = module;
     if (action) query.action = action;
-    if (searchKey) query.name = { $regex: searchKey, $options: "i" };
+    if (searchKey) query.module = { $regex: searchKey, $options: "i" };
 
     const sortField = sortByField || "createdAt";
-    const sortOrder = sortByOrder === "asc" ? 1 : -1;
+    const sortOrder = sortByOrder === "desc" ? -1 : 1;
     const sortOption = { [sortField]: sortOrder };
 
     const permissionList = await Permission.find(query)

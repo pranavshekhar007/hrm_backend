@@ -10,7 +10,7 @@ const auth = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_KEY); // Ensure JWT_KEY is set in your .env file
 
-    const admin = await Admin.findOne({  _id: decoded.adminId });
+    const admin = await Admin.findOne({  _id: decoded.id });
     if (!admin) {
       return res.status(401).json({ error: "Admin not found or token is invalid" });
     }
