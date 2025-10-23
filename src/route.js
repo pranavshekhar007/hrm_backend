@@ -1,8 +1,6 @@
 const express = require("express");
 const departmentController = require("./controller/departmentController");
-const attendanceController = require("./controller/attendanceController");
 const employeeController = require("./controller/employeeController");
-const leaveController = require("./controller/leaveController");
 const permissionController = require("./controller/permissionController");
 const roleController = require("./controller/roleController");
 const payrollController = require("./controller/payrollController");
@@ -40,13 +38,19 @@ const jobPositionController = require("./controller/jobPositionController");
 const candidateSourceController = require("./controller/candidateSourceController");
 const candidateController = require("./controller/candidateController");
 const meetingTypeController = require("./controller/meetingTypeController");
+const leaveTypeController = require("./controller/leaveTypeController");
+const leavePolicyController = require("./controller/leavePolicyController");
+const leaveApplicationController = require("./controller/leaveApplicationController");
+const leaveBalanceController = require("./controller/leaveBalanceController");
+const shiftController = require("./controller/shiftController");
+const attendancePolicyController = require("./controller/attendancePolicyController");
+const attendanceRecordController = require("./controller/attendanceRecordController");
+const attendanceRegularizationController = require("./controller/attendanceRegularizationController");
 
 const router = express.Router();
 
 router.use("/department", departmentController);
-router.use("/attendance", attendanceController);
 router.use("/employee", employeeController);
-router.use("/leave", leaveController);
 router.use("/permission", permissionController);
 router.use("/role", roleController);
 router.use("/payroll", payrollController);
@@ -84,5 +88,15 @@ router.use("/job-position", jobPositionController);
 router.use("/candidate-source", candidateSourceController);
 router.use("/candidate", candidateController);
 router.use("/meeting-type", meetingTypeController);
+router.use("/leave-type", leaveTypeController);
+router.use("/leave-policy", leavePolicyController);
+router.use("/leave-application", leaveApplicationController);
+router.use("/leave-balance", leaveBalanceController);
+router.use("/shifts", shiftController);
+router.use("/attendance-policy", attendancePolicyController);
+router.use("/attendance-record", attendanceRecordController);
+router.use("/attendance-regularization", attendanceRegularizationController);
+
+
 
 module.exports = router;
