@@ -6,19 +6,43 @@ const attendanceRecordController = express.Router();
 const auth = require("../utils/auth");
 
 attendanceRecordController.post("/create", async (req, res) => {
-  try {
-    const recordCreated = await AttendanceRecord.create(req.body);
-
-    sendResponse(res, 200, "Success", {
-      message: "Attendance Record created successfully!",
-      data: recordCreated,
-      statusCode: 200,
-    });
-  } catch (error) {
-    console.error("Attendance Record Create Error:", error);
-    sendResponse(res, 500, "Failed", { message: error.message });
-  }
-});
+    try {
+      const { inTime, outTime, breakHours = 0 } = req.body;
+  
+      let totalHours = 0;
+  
+      // Calculate total working time if inTime and outTime are provided
+      if (inTime && outTime) {
+        const [inH, inM] = inTime.split(":").map(Number);
+        const [outH, outM] = outTime.split(":").map(Number);
+  
+        const inMinutes = inH * 60 + inM;
+        const outMinutes = outH * 60 + outM;
+  
+        let diff = outMinutes - inMinutes; // total minutes worked
+  
+        if (diff < 0) diff += 24 * 60; // handle overnight shifts
+  
+        totalHours = diff / 60 - breakHours;
+        if (totalHours < 0) totalHours = 0;
+      }
+  
+      const recordCreated = await AttendanceRecord.create({
+        ...req.body,
+        totalHours: totalHours.toFixed(2),
+      });
+  
+      sendResponse(res, 200, "Success", {
+        message: "Attendance Record created successfully!",
+        data: recordCreated,
+        statusCode: 200,
+      });
+    } catch (error) {
+      console.error("Attendance Record Create Error:", error);
+      sendResponse(res, 500, "Failed", { message: error.message });
+    }
+  });
+  
 
 attendanceRecordController.post("/list", async (req, res) => {
   try {

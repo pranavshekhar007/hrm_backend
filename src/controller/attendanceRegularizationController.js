@@ -2,6 +2,7 @@ const express = require("express");
 const { sendResponse } = require("../utils/common");
 require("dotenv").config();
 const AttendanceRegularization = require("../model/attendanceRegularization.schema");
+const AttendanceRecord = require("../model/attendanceRecord.schema");
 const attendanceRegularizationController = express.Router();
 const auth = require("../utils/auth");
 
@@ -152,5 +153,24 @@ attendanceRegularizationController.put("/update-status/:id", async (req, res) =>
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
+attendanceRegularizationController.get("/employee/:employeeId", async (req, res) => {
+    try {
+      const { employeeId } = req.params;
+  
+      const attendanceRecords = await AttendanceRecord.find({ employee: employeeId })
+        .populate("employee", "name employeeCode")
+        .sort({ date: -1 });
+  
+      sendResponse(res, 200, "Success", {
+        message: "Employee attendance records fetched successfully!",
+        data: attendanceRecords,
+        statusCode: 200,
+      });
+    } catch (error) {
+      console.error("Employee Attendance Fetch Error:", error);
+      sendResponse(res, 500, "Failed", { message: error.message });
+    }
+  });
 
 module.exports = attendanceRegularizationController;

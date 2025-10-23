@@ -11,13 +11,17 @@ const attendanceRecordSchema = mongoose.Schema({
     type: Date,
     required: true,
   },
-  clockOnTime: {
+  inTime: {
     type: String, 
   },
-  clockOutTime: {
+  outTime: {
     type: String,
   },
   breakHours: {
+    type: Number,
+    default: 0,
+  },
+  totalHours: {
     type: Number,
     default: 0,
   },

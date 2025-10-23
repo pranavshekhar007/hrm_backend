@@ -9,7 +9,7 @@ const attendanceRegularizationSchema = mongoose.Schema({
   },
   attendanceRecord: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Attendance",
+    ref: "AttendanceRecord",
     required: true,
   },
   requestedClockIn: {
