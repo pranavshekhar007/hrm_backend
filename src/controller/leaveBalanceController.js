@@ -85,7 +85,7 @@ leaveBalanceController.post("/list", async (req, res) => {
     const sortOption = { [sortField]: sortOrder };
 
     const leaveBalances = await LeaveBalance.find(query)
-      .populate("employee", "name email")
+      .populate("employee", "fullName email")
       .populate("leaveType", "leaveType color isPaid")
       .sort(sortOption)
       .limit(parseInt(pageCount))

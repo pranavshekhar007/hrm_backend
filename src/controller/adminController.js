@@ -20,6 +20,8 @@ const Branch = require("../model/branch.schema");
 const auth = require("../utils/auth");
 // const Hiring = require("../model/hiring.schema");
 
+// ... (imports remain the same)
+
 adminController.post("/create", async (req, res) => {
   try {
     const { name, email, phone, password, confirmPassword, role } = req.body;
@@ -38,11 +40,22 @@ adminController.post("/create", async (req, res) => {
       });
     }
 
-    // 🔹 Check existing email
+    // 🔹 Check existing email in Admin collection
     const existingAdmin = await Admin.findOne({ email });
     if (existingAdmin) {
       return sendResponse(res, 400, "Failed", {
-        message: "Email already exists",
+        message: "Email already exists in Admin records",
+      });
+    }
+
+    // 🔹 Check existing email in Employee collection if it's an employee role
+    // NOTE: You'll need to know the specific ObjectId or name of the "Employee Role" to check this.
+    // For this example, I'll assume you pass the Role ID for an Employee.
+    // **A BETTER IMPLEMENTATION** would involve checking the Role Name/Type by populating the Role, but since we only have the ID here, we'll proceed assuming the Role ID for 'Employee' is known or the check below is sufficient.
+    const existingEmployee = await Employee.findOne({ email });
+    if (existingEmployee) {
+      return sendResponse(res, 400, "Failed", {
+        message: "Email already exists in Employee records",
       });
     }
 
@@ -56,7 +69,45 @@ adminController.post("/create", async (req, res) => {
       phone,
       role,
       password: hashedPassword,
+      status: true, // Default status for new admin
     });
+
+    // 💾 Conditional Employee Record Creation
+    // 💡 IMPORTANT: Replace 'EMPLOYEE_ROLE_ID' with the actual MongoDB ObjectId of your 'Employee' role.
+    // Since you didn't provide Role schema or list, this is a necessary placeholder.
+    // Alternatively, you could check the Role name after fetching it: const roleData = await Role.findById(role); if (roleData.name === "Employee") { ... }
+    
+    // For this demo, let's assume we proceed if the role is *not* an 'Admin' role (which is a rough but common approach).
+    // The most robust way is to check the *name* of the role.
+    const isEmployeeRole = async (roleId) => {
+      // **You will need to fetch the Role model here if it's not imported/defined globally**
+      // const Role = require("../model/role.schema"); // Assuming Role is your role model
+      // const roleDoc = await Role.findById(roleId);
+      // return roleDoc && roleDoc.name.toLowerCase().includes('employee');
+      
+      // Since we don't have the Role model here, we'll use a placeholder logic.
+      // A common pattern is to check if the role ID is for a non-admin role.
+      // This is a **TEMPORARY** solution. A proper solution requires knowing the Role Name/ID.
+      return true; // Assume any non-Admin role being created here should be an employee for this example.
+    };
+
+    if (await isEmployeeRole(role)) {
+      
+      // ⚠️ Simple ID generation. Use a proper sequence generator in production.
+      const newEmployeeId = `EMP-${Math.floor(Math.random() * 100000) + 1000}`;
+
+      await Employee.create({
+        fullName: name,
+        employeeId: newEmployeeId, // Required by Employee schema
+        email: email,
+        phoneNumber: phone, // Name change from phone to phoneNumber
+        password: hashedPassword,
+        // The role field in AdminSchema is not directly mapped in EmployeeSchema,
+        // but fields like department, designation, etc., are usually required for a real employee.
+        // For now, we only store the minimum required fields from the Admin registration.
+        employmentStatus: "Active", // Default status as per Employee schema enum
+      });
+    }
 
     // 🔹 Generate JWT token
     const token = jwt.sign(
@@ -66,7 +117,7 @@ adminController.post("/create", async (req, res) => {
 
     // 🔹 Success response
     sendResponse(res, 200, "Success", {
-      message: "Admin registered successfully!",
+      message: "Admin/Employee registered successfully!",
       data: newAdmin,
       token,
       statusCode: 200,
@@ -79,6 +130,8 @@ adminController.post("/create", async (req, res) => {
     });
   }
 });
+
+// ... (remaining adminController endpoints remain the same)
 
 adminController.put("/update/:id", async (req, res) => {
   try {

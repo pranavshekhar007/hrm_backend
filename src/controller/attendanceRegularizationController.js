@@ -48,7 +48,7 @@ attendanceRegularizationController.post("/list", async (req, res) => {
     const sortOption = { [sortField]: sortOrder };
 
     const requestList = await AttendanceRegularization.find(query)
-      .populate("employee", "name employeeId")
+      .populate("employee", "fullName employeeId")
       .populate("attendanceRecord")
       .sort(sortOption)
       .limit(parseInt(pageCount))

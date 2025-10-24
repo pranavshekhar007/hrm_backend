@@ -69,7 +69,7 @@ leaveApplicationController.post("/list", async (req, res) => {
     const sortOption = { [sortField]: sortOrder };
 
     const leaveApplications = await LeaveApplication.find(query)
-      .populate("employee", "name email")
+      .populate("employee", "fullName email")
       .populate("leaveType", "leaveType color isPaid")
       .sort(sortOption)
       .limit(parseInt(pageCount))

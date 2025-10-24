@@ -19,9 +19,9 @@ attendanceRecordController.post("/create", async (req, res) => {
         const inMinutes = inH * 60 + inM;
         const outMinutes = outH * 60 + outM;
   
-        let diff = outMinutes - inMinutes; // total minutes worked
+        let diff = outMinutes - inMinutes;
   
-        if (diff < 0) diff += 24 * 60; // handle overnight shifts
+        if (diff < 0) diff += 24 * 60; 
   
         totalHours = diff / 60 - breakHours;
         if (totalHours < 0) totalHours = 0;
@@ -76,7 +76,7 @@ attendanceRecordController.post("/list", async (req, res) => {
     const sortOption = { [sortField]: sortOrder };
 
     const records = await AttendanceRecord.find(query)
-      .populate("employee", "name employeeCode department")
+      .populate("employee", "fullName employeeCode department")
       .sort(sortOption)
       .limit(parseInt(pageCount))
       .skip((pageNo - 1) * parseInt(pageCount));
