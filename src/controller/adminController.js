@@ -88,24 +88,19 @@ adminController.post("/create", async (req, res) => {
       // Since we don't have the Role model here, we'll use a placeholder logic.
       // A common pattern is to check if the role ID is for a non-admin role.
       // This is a **TEMPORARY** solution. A proper solution requires knowing the Role Name/ID.
-      return true; // Assume any non-Admin role being created here should be an employee for this example.
+      return true;
     };
 
     if (await isEmployeeRole(role)) {
-      
-      // ⚠️ Simple ID generation. Use a proper sequence generator in production.
       const newEmployeeId = `EMP-${Math.floor(Math.random() * 100000) + 1000}`;
 
       await Employee.create({
         fullName: name,
-        employeeId: newEmployeeId, // Required by Employee schema
+        employeeId: newEmployeeId,
         email: email,
-        phoneNumber: phone, // Name change from phone to phoneNumber
+        phoneNumber: phone,
         password: hashedPassword,
-        // The role field in AdminSchema is not directly mapped in EmployeeSchema,
-        // but fields like department, designation, etc., are usually required for a real employee.
-        // For now, we only store the minimum required fields from the Admin registration.
-        employmentStatus: "Active", // Default status as per Employee schema enum
+        employmentStatus: "Active",
       });
     }
 

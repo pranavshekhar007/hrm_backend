@@ -6,6 +6,7 @@ const cloudinary = require("../utils/cloudinary");
 const upload = require("../utils/multer");
 const leaveApplicationController = express.Router();
 const auth = require("../utils/auth");
+const Employee = require("../model/employee.schema");
 
 leaveApplicationController.post(
   "/create",
@@ -45,7 +46,7 @@ leaveApplicationController.post(
   }
 );
 
-leaveApplicationController.post("/list", async (req, res) => {
+leaveApplicationController.post("/list", auth, async (req, res) => {
   try {
     const {
       employee,
@@ -58,18 +59,28 @@ leaveApplicationController.post("/list", async (req, res) => {
     } = req.body;
 
     const query = {};
-    if (employee) query.employee = employee;
-    if (status) query.status = status;
-    if (searchKey) {
-      query.reason = { $regex: searchKey, $options: "i" };
+
+    // 🧠 Fix: Use actual Employee record for restriction
+    if (req.user?.role === "employee") {
+      const employeeDoc = await Employee.findOne({ email: req.user.email });
+      if (!employeeDoc) {
+        return sendResponse(res, 404, "Failed", { message: "Employee profile not found" });
+      }
+      query.employee = employeeDoc._id;
+    } else {
+      // Admin / HR filters
+      if (employee) query.employee = employee;
     }
+
+    if (status) query.status = status;
+    if (searchKey) query.reason = { $regex: searchKey, $options: "i" };
 
     const sortField = sortByField || "createdAt";
     const sortOrder = sortByOrder === "asc" ? 1 : -1;
     const sortOption = { [sortField]: sortOrder };
 
     const leaveApplications = await LeaveApplication.find(query)
-      .populate("employee", "fullName email")
+      .populate("employee", "fullName email employeeId department")
       .populate("leaveType", "leaveType color isPaid")
       .sort(sortOption)
       .limit(parseInt(pageCount))
@@ -84,12 +95,11 @@ leaveApplicationController.post("/list", async (req, res) => {
       statusCode: 200,
     });
   } catch (error) {
-    console.error(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal server error",
-    });
+    console.error("Leave List Error:", error);
+    sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
 
 leaveApplicationController.put(
   "/update",

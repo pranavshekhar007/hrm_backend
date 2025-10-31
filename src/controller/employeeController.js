@@ -61,8 +61,7 @@ employeeController.post(
     }
   }
 );
-
-employeeController.post("/list", async (req, res) => {
+employeeController.post("/list", auth, async (req, res) => {
   try {
     const {
       searchKey = "",
@@ -77,11 +76,18 @@ employeeController.post("/list", async (req, res) => {
     } = req.body;
 
     const query = {};
-    if (branch) query.branch = branch;
-    if (department) query.department = department;
-    if (designation) query.designation = designation;
-    if (employmentStatus) query.employmentStatus = employmentStatus;
-    if (searchKey) query.fullName = { $regex: searchKey, $options: "i" };
+
+    // ✅ Restrict employee role to their own data only
+    if (req.user?.role === "employee") {
+      query.email = req.user.email;
+    } else {
+      // 🔹 Admins can still apply filters
+      if (branch) query.branch = branch;
+      if (department) query.department = department;
+      if (designation) query.designation = designation;
+      if (employmentStatus) query.employmentStatus = employmentStatus;
+      if (searchKey) query.fullName = { $regex: searchKey, $options: "i" };
+    }
 
     const sortField = sortByField || "createdAt";
     const sortOrder = sortByOrder === "asc" ? 1 : -1;
@@ -102,13 +108,12 @@ employeeController.post("/list", async (req, res) => {
       statusCode: 200,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Employee List Error:", error);
     sendResponse(res, 500, "Failed", {
       message: error.message || "Internal server error",
     });
   }
 });
-
 employeeController.put(
   "/update",
   upload.fields([
@@ -195,7 +200,6 @@ employeeController.put(
   }
 );
 
-
 employeeController.put("/reset-password", async (req, res) => {
   try {
     const { employeeId, newPassword, confirmPassword } = req.body;
@@ -234,8 +238,6 @@ employeeController.put("/reset-password", async (req, res) => {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
-
-
 
 employeeController.delete("/delete/:id", async (req, res) => {
   try {
