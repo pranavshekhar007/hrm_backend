@@ -223,6 +223,7 @@ attendanceRecordController.post("/checkin", auth, async (req, res) => {
     sendResponse(res, 200, "Success", {
       message: "Checked in successfully!",
       data: populatedRecord,
+      statusCode: 200,
     });
   } catch (error) {
     console.error("Check-In Error:", error);
@@ -320,6 +321,7 @@ attendanceRecordController.post("/checkout", auth, async (req, res) => {
     sendResponse(res, 200, "Success", {
       message: "Checked out successfully!",
       data: populatedRecord,
+      statusCode: 200,
     });
   } catch (error) {
     console.error("Check-Out Error:", error);
@@ -457,6 +459,7 @@ attendanceRecordController.get("/today", auth, async (req, res) => {
         notes: record.notes || "",
         employee: record.employee,
       },
+      statusCode: 200,
     });
   } catch (error) {
     console.error("Today's Attendance Fetch Error:", error);
