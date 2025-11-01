@@ -5,7 +5,6 @@ const AttendanceRecord = require("../model/attendanceRecord.schema");
 const attendanceRecordController = express.Router();
 const auth = require("../utils/auth");
 const mongoose = require("mongoose");
-const moment = require("moment-timezone");
 const Employee = require("../model/employee.schema");
 
 attendanceRecordController.post("/create", async (req, res) => {
@@ -66,9 +65,7 @@ attendanceRecordController.post("/list", auth, async (req, res) => {
     if (req.user.role === "employee") {
       const employeeDoc = await Employee.findOne({ email: req.user.email });
       if (!employeeDoc) {
-        return sendResponse(res, 404, "Failed", {
-          message: "Employee profile not found",
-        });
+        return sendResponse(res, 404, "Failed", { message: "Employee profile not found" });
       }
       query.employee = employeeDoc._id;
     } else {
@@ -109,6 +106,7 @@ attendanceRecordController.post("/list", auth, async (req, res) => {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
 
 attendanceRecordController.put("/update", async (req, res) => {
   try {
@@ -169,6 +167,7 @@ attendanceRecordController.post("/checkin", auth, async (req, res) => {
       });
     }
 
+    // 🧠 Get employee linked to user
     const employee = await Employee.findOne({ email: req.user.email });
     if (!employee) {
       return sendResponse(res, 404, "Failed", {
@@ -177,24 +176,24 @@ attendanceRecordController.post("/checkin", auth, async (req, res) => {
     }
 
     const employeeId = employee._id;
-
-    // ✅ Date setup (IST)
-    const currentMoment = moment().tz("Asia/Kolkata");
-    const dateOnly = currentMoment.startOf("day").toDate();
+    const currentDate = new Date();
+    const dateOnly = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      currentDate.getDate()
+    );
 
     const existingRecord = await AttendanceRecord.findOne({
       employee: employeeId,
       date: dateOnly,
     });
-
     if (existingRecord) {
       return sendResponse(res, 400, "Failed", {
         message: "You have already checked in today",
       });
     }
 
-    const inTime = currentMoment.format("hh:mm A");
-
+    const inTime = currentDate.toTimeString().split(" ")[0].slice(0, 8);
     const record = await AttendanceRecord.create({
       employee: employeeId,
       date: dateOnly,
@@ -217,7 +216,6 @@ attendanceRecordController.post("/checkin", auth, async (req, res) => {
   }
 });
 
-// ✅ Check-Out
 attendanceRecordController.post("/checkout", auth, async (req, res) => {
   try {
     if (req.user.role !== "employee") {
@@ -226,6 +224,7 @@ attendanceRecordController.post("/checkout", auth, async (req, res) => {
       });
     }
 
+    // 🧠 Find actual Employee record first
     const employee = await Employee.findOne({ email: req.user.email });
     if (!employee) {
       return sendResponse(res, 404, "Failed", {
@@ -234,14 +233,17 @@ attendanceRecordController.post("/checkout", auth, async (req, res) => {
     }
 
     const employeeId = employee._id;
-    const currentMoment = moment().tz("Asia/Kolkata");
-    const dateOnly = currentMoment.startOf("day").toDate();
+    const currentDate = new Date();
+    const dateOnly = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      currentDate.getDate()
+    );
 
     const record = await AttendanceRecord.findOne({
       employee: employeeId,
       date: dateOnly,
     });
-
     if (!record) {
       return sendResponse(res, 404, "Failed", {
         message: "No check-in record found for today. Please check in first.",
@@ -254,13 +256,13 @@ attendanceRecordController.post("/checkout", auth, async (req, res) => {
       });
     }
 
-    const outTime = currentMoment.format("hh:mm A");
+    const outTime = currentDate.toTimeString().split(" ")[0].slice(0, 8);
+    const [inH, inM] = record.inTime.split(":").map(Number);
+    const [outH, outM] = outTime.split(":").map(Number);
+    let diff = outH * 60 + outM - (inH * 60 + inM);
+    if (diff < 0) diff += 24 * 60;
 
-    // 🧮 Calculate total working hours (in decimal)
-    const inTimeMoment = moment(record.inTime, "hh:mm A");
-    const diffMinutes = currentMoment.diff(inTimeMoment, "minutes");
-    const totalHours = (diffMinutes / 60).toFixed(2);
-
+    const totalHours = (diff / 60).toFixed(2);
     record.outTime = outTime;
     record.totalHours = totalHours;
     record.notes = "Checked out";
@@ -281,7 +283,6 @@ attendanceRecordController.post("/checkout", auth, async (req, res) => {
   }
 });
 
-// ✅ Employee’s Own Records
 attendanceRecordController.post("/my-records", auth, async (req, res) => {
   try {
     if (req.user.role !== "employee") {
@@ -290,7 +291,6 @@ attendanceRecordController.post("/my-records", auth, async (req, res) => {
       });
     }
 
-    // 🧠 Get employee via email
     const employee = await Employee.findOne({ email: req.user.email });
     if (!employee) {
       return sendResponse(res, 404, "Failed", {
@@ -352,27 +352,37 @@ attendanceRecordController.get("/today", auth, async (req, res) => {
     }
 
     const employeeId = employee._id;
-    const currentMoment = moment().tz("Asia/Kolkata");
-    const dateOnly = currentMoment.startOf("day").toDate();
+
+    const currentDate = new Date();
+    const startOfDay = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      currentDate.getDate()
+    );
 
     const record = await AttendanceRecord.findOne({
       employee: employeeId,
-      date: dateOnly,
+      date: startOfDay,
     }).populate("employee", "fullName employeeId department");
 
     if (!record) {
       return sendResponse(res, 404, "Failed", {
         message: "No attendance record found for today. Please check in first.",
+        statusCode:404,
       });
     }
+    const formatTo12Hour = (timeStr) => {
+      if (!timeStr) return null;
+      const [hour, minute, second] = timeStr.split(":").map(Number);
+      const ampm = hour >= 12 ? "PM" : "AM";
+      const h = hour % 12 || 12;
+      return `${h.toString().padStart(2, "0")}:${minute
+        .toString()
+        .padStart(2, "0")} ${ampm}`;
+    };
 
-    // 🕒 Ensure consistent 12-hour format
-    const inTime12 = record.inTime
-      ? moment(record.inTime, "hh:mm A").format("hh:mm A")
-      : null;
-    const outTime12 = record.outTime
-      ? moment(record.outTime, "hh:mm A").format("hh:mm A")
-      : null;
+    const inTime12 = formatTo12Hour(record.inTime);
+    const outTime12 = formatTo12Hour(record.outTime);
 
     sendResponse(res, 200, "Success", {
       message: "Today's attendance details retrieved successfully!",
@@ -385,10 +395,11 @@ attendanceRecordController.get("/today", auth, async (req, res) => {
         notes: record.notes || "",
         employee: record.employee,
       },
+      statusCode:200,
     });
   } catch (error) {
     console.error("Today's Attendance Fetch Error:", error);
-    sendResponse(res, 500, "Failed", { message: error.message });
+    sendResponse(res, 500, "Failed", { message: error.message, statusCode: 500, });
   }
 });
 
