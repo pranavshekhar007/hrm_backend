@@ -18,6 +18,7 @@ const Announcement = require("../model/announcement.schema");
 const Employee = require("../model/employee.schema");
 const Branch = require("../model/branch.schema");
 const auth = require("../utils/auth");
+const Role = require("../model/role.schema");
 // const Hiring = require("../model/hiring.schema");
 
 // ... (imports remain the same)
@@ -28,103 +29,66 @@ adminController.post("/create", async (req, res) => {
 
     // 🔹 Validate required fields
     if (!name || !email || !password || !confirmPassword || !phone || !role) {
-      return sendResponse(res, 422, "Failed", {
-        message: "All fields are required",
-      });
+      return sendResponse(res, 422, "Failed", { message: "All fields are required" });
     }
 
-    // 🔹 Check password match
     if (password !== confirmPassword) {
-      return sendResponse(res, 400, "Failed", {
-        message: "Passwords do not match",
-      });
+      return sendResponse(res, 400, "Failed", { message: "Passwords do not match" });
     }
 
-    // 🔹 Check existing email in Admin collection
+    // 🔹 Check existing email in Admin or Employee
     const existingAdmin = await Admin.findOne({ email });
-    if (existingAdmin) {
-      return sendResponse(res, 400, "Failed", {
-        message: "Email already exists in Admin records",
-      });
-    }
-
-    // 🔹 Check existing email in Employee collection if it's an employee role
-    // NOTE: You'll need to know the specific ObjectId or name of the "Employee Role" to check this.
-    // For this example, I'll assume you pass the Role ID for an Employee.
-    // **A BETTER IMPLEMENTATION** would involve checking the Role Name/Type by populating the Role, but since we only have the ID here, we'll proceed assuming the Role ID for 'Employee' is known or the check below is sufficient.
     const existingEmployee = await Employee.findOne({ email });
-    if (existingEmployee) {
-      return sendResponse(res, 400, "Failed", {
-        message: "Email already exists in Employee records",
-      });
+    if (existingAdmin || existingEmployee) {
+      return sendResponse(res, 400, "Failed", { message: "Email already exists" });
     }
 
-    // 🔹 Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 🔹 Create new admin
+    // 🔹 Create Admin record first
     const newAdmin = await Admin.create({
       name,
       email,
       phone,
       role,
       password: hashedPassword,
-      status: true, // Default status for new admin
+      status: true,
     });
 
-    // 💾 Conditional Employee Record Creation
-    // 💡 IMPORTANT: Replace 'EMPLOYEE_ROLE_ID' with the actual MongoDB ObjectId of your 'Employee' role.
-    // Since you didn't provide Role schema or list, this is a necessary placeholder.
-    // Alternatively, you could check the Role name after fetching it: const roleData = await Role.findById(role); if (roleData.name === "Employee") { ... }
-    
-    // For this demo, let's assume we proceed if the role is *not* an 'Admin' role (which is a rough but common approach).
-    // The most robust way is to check the *name* of the role.
-    const isEmployeeRole = async (roleId) => {
-      // **You will need to fetch the Role model here if it's not imported/defined globally**
-      // const Role = require("../model/role.schema"); // Assuming Role is your role model
-      // const roleDoc = await Role.findById(roleId);
-      // return roleDoc && roleDoc.name.toLowerCase().includes('employee');
-      
-      // Since we don't have the Role model here, we'll use a placeholder logic.
-      // A common pattern is to check if the role ID is for a non-admin role.
-      // This is a **TEMPORARY** solution. A proper solution requires knowing the Role Name/ID.
-      return true;
-    };
-
-    if (await isEmployeeRole(role)) {
+    // 🔹 If the role is Employee — create a linked Employee using SAME _id
+    const roleDoc = await Role.findById(role); // make sure Role model is imported
+    if (roleDoc && roleDoc.name.toLowerCase() === "employee") {
       const newEmployeeId = `EMP-${Math.floor(Math.random() * 100000) + 1000}`;
 
+      // 👇 use same _id as Admin
       await Employee.create({
+        _id: newAdmin._id,
         fullName: name,
         employeeId: newEmployeeId,
-        email: email,
+        email,
         phoneNumber: phone,
         password: hashedPassword,
         employmentStatus: "Active",
       });
     }
 
-    // 🔹 Generate JWT token
+    // 🔹 Generate JWT
     const token = jwt.sign(
       { id: newAdmin._id, email: newAdmin.email, role: newAdmin.role },
       process.env.JWT_KEY
     );
 
-    // 🔹 Success response
     sendResponse(res, 200, "Success", {
       message: "Admin/Employee registered successfully!",
       data: newAdmin,
       token,
-      statusCode: 200,
     });
   } catch (error) {
     console.error(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal server error",
-      statusCode: 500,
-    });
+    sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
 
 // ... (remaining adminController endpoints remain the same)
 
