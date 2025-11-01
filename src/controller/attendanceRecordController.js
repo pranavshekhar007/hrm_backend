@@ -187,13 +187,26 @@ attendanceRecordController.post("/checkin", auth, async (req, res) => {
       employee: employeeId,
       date: dateOnly,
     });
+
     if (existingRecord) {
       return sendResponse(res, 400, "Failed", {
         message: "You have already checked in today",
       });
     }
 
-    const inTime = currentDate.toTimeString().split(" ")[0].slice(0, 8);
+    // ✅ Format to 12-hour time
+    const formatTo12Hour = (date) => {
+      let hours = date.getHours();
+      let minutes = date.getMinutes();
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12 || 12;
+      return `${hours.toString().padStart(2, "0")}:${minutes
+        .toString()
+        .padStart(2, "0")} ${ampm}`;
+    };
+
+    const inTime = formatTo12Hour(currentDate);
+
     const record = await AttendanceRecord.create({
       employee: employeeId,
       date: dateOnly,
@@ -202,9 +215,10 @@ attendanceRecordController.post("/checkin", auth, async (req, res) => {
       notes: "Checked in",
     });
 
-    const populatedRecord = await AttendanceRecord.findById(
-      record._id
-    ).populate("employee", "fullName employeeId department");
+    const populatedRecord = await AttendanceRecord.findById(record._id).populate(
+      "employee",
+      "fullName employeeId department"
+    );
 
     sendResponse(res, 200, "Success", {
       message: "Checked in successfully!",
@@ -245,6 +259,7 @@ attendanceRecordController.post("/checkout", auth, async (req, res) => {
       employee: employeeId,
       date: dateOnly,
     });
+
     if (!record) {
       return sendResponse(res, 404, "Failed", {
         message: "No check-in record found for today. Please check in first.",
@@ -257,23 +272,50 @@ attendanceRecordController.post("/checkout", auth, async (req, res) => {
       });
     }
 
-    // ✅ Update checkout time
-    const outTime = currentDate.toTimeString().split(" ")[0].slice(0, 8);
-    const [inH, inM] = record.inTime.split(":").map(Number);
-    const [outH, outM] = outTime.split(":").map(Number);
-    let diff = outH * 60 + outM - (inH * 60 + inM);
+    // ✅ Get outTime in both 24-hour (for math) and 12-hour (for saving)
+    const outDate = new Date();
+    const formatTo12Hour = (date) => {
+      let hours = date.getHours();
+      let minutes = date.getMinutes();
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12 || 12;
+      return `${hours.toString().padStart(2, "0")}:${minutes
+        .toString()
+        .padStart(2, "0")} ${ampm}`;
+    };
+
+    const outTime = formatTo12Hour(outDate);
+
+    // ✅ Convert stored 12-hour inTime back to 24-hour for totalHours calculation
+    const convertTo24 = (time12) => {
+      const [time, modifier] = time12.split(" ");
+      let [hours, minutes] = time.split(":").map(Number);
+
+      if (modifier === "PM" && hours < 12) hours += 12;
+      if (modifier === "AM" && hours === 12) hours = 0;
+
+      return { hours, minutes };
+    };
+
+    const inT = convertTo24(record.inTime);
+    const outH = outDate.getHours();
+    const outM = outDate.getMinutes();
+
+    let diff = outH * 60 + outM - (inT.hours * 60 + inT.minutes);
     if (diff < 0) diff += 24 * 60;
 
     const totalHours = (diff / 60).toFixed(2);
+
     record.outTime = outTime;
     record.totalHours = totalHours;
     record.notes = "Checked out";
 
     await record.save();
 
-    const populatedRecord = await AttendanceRecord.findById(
-      record._id
-    ).populate("employee", "fullName employeeId department");
+    const populatedRecord = await AttendanceRecord.findById(record._id).populate(
+      "employee",
+      "fullName employeeId department"
+    );
 
     sendResponse(res, 200, "Success", {
       message: "Checked out successfully!",
@@ -284,6 +326,7 @@ attendanceRecordController.post("/checkout", auth, async (req, res) => {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
 
 // ✅ Employee’s Own Records
 attendanceRecordController.post("/my-records", auth, async (req, res) => {
@@ -339,5 +382,88 @@ attendanceRecordController.post("/my-records", auth, async (req, res) => {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
+attendanceRecordController.get("/today", auth, async (req, res) => {
+  try {
+    // ✅ Only employees can access this route
+    if (req.user.role !== "employee") {
+      return sendResponse(res, 403, "Failed", {
+        message: "Only employees can view today's attendance details",
+      });
+    }
+
+    // 🧠 Get employee from the logged-in user's email
+    const employee = await Employee.findOne({ email: req.user.email });
+    if (!employee) {
+      return sendResponse(res, 404, "Failed", {
+        message: "Employee profile not found",
+      });
+    }
+
+    const employeeId = employee._id;
+
+    // ✅ Get today's date (midnight start)
+    const currentDate = new Date();
+    const startOfDay = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      currentDate.getDate()
+    );
+
+    // ✅ Find today's attendance record
+    const record = await AttendanceRecord.findOne({
+      employee: employeeId,
+      date: startOfDay,
+    }).populate("employee", "fullName employeeId department");
+
+    if (!record) {
+      return sendResponse(res, 404, "Failed", {
+        message: "No attendance record found for today. Please check in first.",
+      });
+    }
+
+    // ✅ Time formatter (handles both 12h and 24h)
+    const formatTo12Hour = (timeStr) => {
+      if (!timeStr || typeof timeStr !== "string") return null;
+
+      // If already includes AM/PM → just return as is
+      if (timeStr.toUpperCase().includes("AM") || timeStr.toUpperCase().includes("PM")) {
+        return timeStr;
+      }
+
+      // Otherwise, assume HH:MM[:SS] format
+      const parts = timeStr.split(":").map((p) => parseInt(p, 10));
+      const hour = parts[0];
+      const minute = parts[1] || 0;
+      const ampm = hour >= 12 ? "PM" : "AM";
+      const h = hour % 12 || 12;
+      return `${h.toString().padStart(2, "0")}:${minute
+        .toString()
+        .padStart(2, "0")} ${ampm}`;
+    };
+
+    const inTime12 = formatTo12Hour(record.inTime);
+    const outTime12 = formatTo12Hour(record.outTime);
+
+    // ✅ Format response
+    sendResponse(res, 200, "Success", {
+      message: "Today's attendance details retrieved successfully!",
+      data: {
+        date: record.date,
+        inTime: inTime12,
+        outTime: outTime12,
+        totalHours: record.totalHours || null,
+        status: record.status || "Absent",
+        notes: record.notes || "",
+        employee: record.employee,
+      },
+    });
+  } catch (error) {
+    console.error("Today's Attendance Fetch Error:", error);
+    sendResponse(res, 500, "Failed", { message: error.message });
+  }
+});
+
+
 
 module.exports = attendanceRecordController;
