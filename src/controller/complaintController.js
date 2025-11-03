@@ -5,6 +5,7 @@ const Employee = require("../model/employee.schema");
 const complaintController = express.Router();
 const cloudinary = require("../utils/cloudinary");
 const upload = require("../utils/multer");
+const auth = require("../utils/auth");
 
 complaintController.post(
   "/create",
@@ -56,17 +57,23 @@ complaintController.post(
 );
 
 
-complaintController.post("/list", async (req, res) => {
+complaintController.post("/list", auth, async (req, res) => {
   try {
     const { searchKey = "", pageNo = 1, pageCount = 10, status } = req.body;
 
     const query = {};
-    if (status) query.status = status;
-    if (searchKey) {
-      query.$or = [
-        { subject: { $regex: searchKey, $options: "i" } },
-        { description: { $regex: searchKey, $options: "i" } },
-      ];
+
+    // ✅ Restrict employees to complaints they filed or are involved in
+    if (req.user?.role === "employee") {
+      query.$or = [{ employee: req.user._id }, { against: req.user._id }];
+    } else {
+      if (status) query.status = status;
+      if (searchKey) {
+        query.$or = [
+          { subject: { $regex: searchKey, $options: "i" } },
+          { description: { $regex: searchKey, $options: "i" } },
+        ];
+      }
     }
 
     const complaints = await Complaint.find(query)
@@ -83,12 +90,12 @@ complaintController.post("/list", async (req, res) => {
       message: "Complaint list retrieved successfully",
       data: complaints,
       total: totalCount,
-      statusCode: 200,
     });
   } catch (error) {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
 
 complaintController.put(
   "/update/:id",

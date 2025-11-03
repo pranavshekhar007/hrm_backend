@@ -34,7 +34,7 @@ const jobRequisitionController = require("./controller/jobRequisitionController"
 const jobTypeController = require("./controller/jobTypeController");
 const jobLocationController = require("./controller/jobLocationController");
 const adminController = require("./controller/adminController");
-const jobPositionController = require("./controller/jobPositionController");
+const jobPostingController = require("./controller/jobPostingController");
 const candidateSourceController = require("./controller/candidateSourceController");
 const candidateController = require("./controller/candidateController");
 const meetingTypeController = require("./controller/meetingTypeController");
@@ -46,6 +46,8 @@ const shiftController = require("./controller/shiftController");
 const attendancePolicyController = require("./controller/attendancePolicyController");
 const attendanceRecordController = require("./controller/attendanceRecordController");
 const attendanceRegularizationController = require("./controller/attendanceRegularizationController");
+const meetingRoomController = require("./controller/meetingRoomController");
+const meetingController = require("./controller/meetingController");
 
 const router = express.Router();
 
@@ -84,10 +86,12 @@ router.use("/job-requisition", jobRequisitionController);
 router.use("/job-type", jobTypeController);
 router.use("/job-location", jobLocationController);
 router.use("/admin", adminController);
-router.use("/job-position", jobPositionController);
+router.use("/job-posting", jobPostingController);
 router.use("/candidate-source", candidateSourceController);
 router.use("/candidate", candidateController);
 router.use("/meeting-type", meetingTypeController);
+router.use("/meeting-room", meetingRoomController);
+router.use("/meeting", meetingController);
 router.use("/leave-type", leaveTypeController);
 router.use("/leave-policy", leavePolicyController);
 router.use("/leave-application", leaveApplicationController);
@@ -96,7 +100,5 @@ router.use("/shifts", shiftController);
 router.use("/attendance-policy", attendancePolicyController);
 router.use("/attendance-record", attendanceRecordController);
 router.use("/attendance-regularization", attendanceRegularizationController);
-
-
 
 module.exports = router;

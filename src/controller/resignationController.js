@@ -4,6 +4,7 @@ require("dotenv").config();
 const Resignation = require("../model/resignation.schema");
 const cloudinary = require("../utils/cloudinary");
 const upload = require("../utils/multer");
+const auth = require("../utils/auth");
 
 const resignationController = express.Router();
 
@@ -59,7 +60,7 @@ resignationController.post(
   }
 );
 
-resignationController.post("/list", async (req, res) => {
+resignationController.post("/list", auth, async (req, res) => {
   try {
     const {
       searchKey = "",
@@ -73,18 +74,22 @@ resignationController.post("/list", async (req, res) => {
 
     const query = {};
 
-    if (employee) query.employee = employee;
-    if (status) query.status = status;
-    if (searchKey)
-      query.reason = { $regex: searchKey, $options: "i" };
+    // ✅ Restrict employee to view only their resignations
+    if (req.user?.role === "employee") {
+      query.employee = req.user._id;
+    } else {
+      if (employee) query.employee = employee;
+      if (status) query.status = status;
+      if (searchKey)
+        query.reason = { $regex: searchKey, $options: "i" };
+    }
 
     const sortField = sortByField || "createdAt";
     const sortOrder = sortByOrder === "asc" ? 1 : -1;
-    const sortOption = { [sortField]: sortOrder };
 
     const resignationList = await Resignation.find(query)
       .populate("employee")
-      .sort(sortOption)
+      .sort({ [sortField]: sortOrder })
       .limit(parseInt(pageCount))
       .skip((pageNo - 1) * parseInt(pageCount));
 
@@ -94,15 +99,13 @@ resignationController.post("/list", async (req, res) => {
       message: "Resignation list retrieved successfully!",
       data: resignationList,
       total: totalCount,
-      statusCode: 200,
     });
   } catch (error) {
     console.error(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal Server Error",
-    });
+    sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
 
 resignationController.put(
   "/update",

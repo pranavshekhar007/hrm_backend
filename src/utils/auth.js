@@ -10,7 +10,8 @@ const auth = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_KEY);
 
-    const admin = await Admin.findOne({ _id: decoded.id }).populate("role");
+    // Find admin and populate the role
+    const admin = await Admin.findById(decoded.id).populate("role");
     if (!admin) {
       return res.status(401).json({ error: "Admin not found or token is invalid" });
     }
@@ -18,11 +19,16 @@ const auth = async (req, res, next) => {
     req.token = token;
     req.admin = admin;
 
-    // ✅ Add this unified user object for easier access in all controllers
+    // ✅ Normalize and clean up role name
+    const roleName = admin.role?.name
+      ? admin.role.name.toLowerCase().trim().replace(/\s+/g, "")
+      : "employee";
+
+    // Unified user object for all controllers
     req.user = {
       id: admin._id,
       email: admin.email,
-      role: admin.role?.name?.toLowerCase() || "employee",
+      role: roleName, // e.g. "superadmin", "hr", "employee"
       name: admin.name || admin.fullName,
     };
 

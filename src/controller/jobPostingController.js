@@ -1,13 +1,13 @@
 const express = require("express");
 const { sendResponse } = require("../utils/common");
-const JobPosition = require("../model/jobPosition.schema");
+const jobPosting = require("../model/jobPosting.schema");
 require("dotenv").config();
 
-const jobPositionController = express.Router();
+const jobPostingController = express.Router();
 
-jobPositionController.post("/create", async (req, res) => {
+jobPostingController.post("/create", async (req, res) => {
   try {
-    const position = await JobPosition.create(req.body);
+    const position = await jobPosting.create(req.body);
     sendResponse(res, 200, "Success", {
       message: "Job position created successfully!",
       data: position,
@@ -18,7 +18,7 @@ jobPositionController.post("/create", async (req, res) => {
   }
 });
 
-jobPositionController.post("/list", async (req, res) => {
+jobPostingController.post("/list", async (req, res) => {
   try {
     const {
       searchKey = "",
@@ -38,7 +38,7 @@ jobPositionController.post("/list", async (req, res) => {
     const sortField = sortByField || "createdAt";
     const sortOrder = sortByOrder === "asc" ? 1 : -1;
 
-    const positions = await JobPosition.find(query)
+    const positions = await jobPosting.find(query)
       .populate("jobRequisition", "title")
       .populate("jobType", "name")
       .populate("jobLocation", "name")
@@ -47,7 +47,7 @@ jobPositionController.post("/list", async (req, res) => {
       .skip((pageNo - 1) * parseInt(pageCount))
       .limit(parseInt(pageCount));
 
-    const totalCount = await JobPosition.countDocuments(query);
+    const totalCount = await jobPosting.countDocuments(query);
 
     sendResponse(res, 200, "Success", {
       message: "Job positions list fetched successfully!",
@@ -60,10 +60,10 @@ jobPositionController.post("/list", async (req, res) => {
   }
 });
 
-jobPositionController.put("/update/:id", async (req, res) => {
+jobPostingController.put("/update/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const position = await JobPosition.findByIdAndUpdate(id, req.body, { new: true });
+    const position = await jobPosting.findByIdAndUpdate(id, req.body, { new: true });
     if (!position)
       return sendResponse(res, 404, "Failed", { message: "Job position not found" });
 
@@ -77,10 +77,10 @@ jobPositionController.put("/update/:id", async (req, res) => {
   }
 });
 
-jobPositionController.delete("/delete/:id", async (req, res) => {
+jobPostingController.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const position = await JobPosition.findByIdAndDelete(id);
+    const position = await jobPosting.findByIdAndDelete(id);
     if (!position)
       return sendResponse(res, 404, "Failed", { message: "Job position not found" });
 
@@ -93,12 +93,12 @@ jobPositionController.delete("/delete/:id", async (req, res) => {
   }
 });
 
-jobPositionController.put("/change-status/:id", async (req, res) => {
+jobPostingController.put("/change-status/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    const position = await JobPosition.findById(id);
+    const position = await jobPosting.findById(id);
     if (!position)
       return sendResponse(res, 404, "Failed", { message: "Job position not found" });
 
@@ -115,4 +115,4 @@ jobPositionController.put("/change-status/:id", async (req, res) => {
   }
 });
 
-module.exports = jobPositionController;
+module.exports = jobPostingController;

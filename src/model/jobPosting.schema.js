@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const timestamps = require("mongoose-timestamp");
 
-const jobPositionSchema = mongoose.Schema({
+const jobPostingSchema = mongoose.Schema({
   jobRequisition: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "JobRequisition",
@@ -70,6 +70,6 @@ const jobPositionSchema = mongoose.Schema({
   },
 });
 
-jobPositionSchema.plugin(timestamps);
+jobPostingSchema.plugin(timestamps);
 
-module.exports = mongoose.model("JobPosition", jobPositionSchema);
+module.exports = mongoose.model("JobPosting", jobPostingSchema);

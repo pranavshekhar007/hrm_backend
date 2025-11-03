@@ -6,6 +6,7 @@ const Employee = require("../model/employee.schema");
 const warningController = express.Router();
 const cloudinary = require("../utils/cloudinary");
 const upload = require("../utils/multer");
+const auth = require("../utils/auth");
 
 warningController.post("/create", upload.single("document"), async (req, res) => {
   try {
@@ -44,7 +45,7 @@ warningController.post("/create", upload.single("document"), async (req, res) =>
   }
 });
 
-warningController.post("/list", async (req, res) => {
+warningController.post("/list", auth, async (req, res) => {
   try {
     const {
       searchKey = "",
@@ -56,22 +57,27 @@ warningController.post("/list", async (req, res) => {
     } = req.body;
 
     const query = {};
-    if (status) query.status = status;
-    if (searchKey) {
-      query.$or = [
-        { subject: { $regex: searchKey, $options: "i" } },
-        { description: { $regex: searchKey, $options: "i" } },
-      ];
+
+    // ✅ Restrict employee to only their received warnings
+    if (req.user?.role === "employee") {
+      query.employee = req.user._id;
+    } else {
+      if (status) query.status = status;
+      if (searchKey) {
+        query.$or = [
+          { subject: { $regex: searchKey, $options: "i" } },
+          { description: { $regex: searchKey, $options: "i" } },
+        ];
+      }
     }
 
     const sortField = sortByField || "createdAt";
     const sortOrder = sortByOrder === "asc" ? 1 : -1;
-    const sortOption = { [sortField]: sortOrder };
 
     const warnings = await Warning.find(query)
       .populate("employee", "fullName email")
       .populate("warningBy", "fullName email")
-      .sort(sortOption)
+      .sort({ [sortField]: sortOrder })
       .limit(parseInt(pageCount))
       .skip((pageNo - 1) * parseInt(pageCount));
 
@@ -81,12 +87,12 @@ warningController.post("/list", async (req, res) => {
       message: "Warning list retrieved successfully!",
       data: warnings,
       total: totalCount,
-      statusCode: 200,
     });
   } catch (error) {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
 
 warningController.put("/update", upload.single("document"), async (req, res) => {
   try {

@@ -16,7 +16,7 @@ const meetingTypeSchema = mongoose.Schema({
     trim: true,
   },
   defaultDuration: {
-    type: Number, // in minutes
+    type: Number,
     default: 30,
   },
   status: {

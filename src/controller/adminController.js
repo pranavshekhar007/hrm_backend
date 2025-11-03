@@ -9,18 +9,21 @@ require("dotenv").config();
 const cloudinary = require("../utils/cloudinary");
 const upload = require("../utils/multer");
 const moment = require("moment");
-const Attendance = require("../model/attendanceRecord.schema");
-const Leave = require("../model/leaveApplication.schema");
-const Candidate = require("../model/candidate.schema");
-const Department = require("../model/department.schema");
-const Announcement = require("../model/announcement.schema");
-// const Meeting = require("../model/meeting.schema");
+
 const Employee = require("../model/employee.schema");
-const Branch = require("../model/branch.schema");
 const auth = require("../utils/auth");
 const Role = require("../model/role.schema");
-// const Hiring = require("../model/hiring.schema");
 
+const Branch = require("../model/branch.schema");
+const AttendanceRecord = require("../model/attendanceRecord.schema");
+const Leave = require("../model/leaveApplication.schema");
+const Department = require("../model/department.schema");
+const Announcement = require("../model/announcement.schema");
+const Meeting = require("../model/meeting.schema");
+const Warning = require("../model/warning.schema");
+const Complaint = require("../model/complaint.schema");
+const Award = require("../model/award.schema");
+const LeaveType = require("../model/leaveType.schema"); 
 // ... (imports remain the same)
 
 adminController.post("/create", async (req, res) => {
@@ -29,18 +32,24 @@ adminController.post("/create", async (req, res) => {
 
     // 🔹 Validate required fields
     if (!name || !email || !password || !confirmPassword || !phone || !role) {
-      return sendResponse(res, 422, "Failed", { message: "All fields are required" });
+      return sendResponse(res, 422, "Failed", {
+        message: "All fields are required",
+      });
     }
 
     if (password !== confirmPassword) {
-      return sendResponse(res, 400, "Failed", { message: "Passwords do not match" });
+      return sendResponse(res, 400, "Failed", {
+        message: "Passwords do not match",
+      });
     }
 
     // 🔹 Check existing email in Admin or Employee
     const existingAdmin = await Admin.findOne({ email });
     const existingEmployee = await Employee.findOne({ email });
     if (existingAdmin || existingEmployee) {
-      return sendResponse(res, 400, "Failed", { message: "Email already exists" });
+      return sendResponse(res, 400, "Failed", {
+        message: "Email already exists",
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -89,7 +98,6 @@ adminController.post("/create", async (req, res) => {
   }
 });
 
-
 // ... (remaining adminController endpoints remain the same)
 
 adminController.put("/update/:id", async (req, res) => {
@@ -136,7 +144,6 @@ adminController.put("/update/:id", async (req, res) => {
   }
 });
 
-
 adminController.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -176,13 +183,17 @@ adminController.post("/login", async (req, res) => {
       .lean();
 
     if (!user) {
-      return sendResponse(res, 422, "Failed", { message: "Invalid Credentials" });
+      return sendResponse(res, 422, "Failed", {
+        message: "Invalid Credentials",
+      });
     }
 
     // Step 2: Verify password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return sendResponse(res, 422, "Failed", { message: "Invalid Credentials" });
+      return sendResponse(res, 422, "Failed", {
+        message: "Invalid Credentials",
+      });
     }
 
     // Step 3: Generate token
@@ -212,9 +223,10 @@ adminController.post("/login", async (req, res) => {
       permissions: updatedAdmin.role.permissions.map((perm) => ({
         ...perm,
         // ✅ keep real selectedActions if present, fallback to empty []
-        selectedActions: perm.selectedActions && perm.selectedActions.length
-          ? perm.selectedActions
-          : perm.actions || [], // if still not present, fallback to actions
+        selectedActions:
+          perm.selectedActions && perm.selectedActions.length
+            ? perm.selectedActions
+            : perm.actions || [], // if still not present, fallback to actions
         // Optional: remove raw `actions` if not needed
         actions: undefined,
       })),
@@ -238,8 +250,6 @@ adminController.post("/login", async (req, res) => {
     });
   }
 });
-
-
 
 adminController.post("/list", async (req, res) => {
   try {
@@ -343,125 +353,156 @@ adminController.post("/reset-password", async (req, res) => {
   }
 });
 
-
-adminController.get("/dashboard-details", async (req, res) => {
+adminController.get("/dashboard-details", auth, async (req, res) => {
   try {
-    // 1️⃣ Parallel counts
-    const [
-      totalEmployee,
-      totalBranch,
-      attendanceRecords,
-      pendingLeaves,
-      totalCandidate,
-      departmentList,
-    ] = await Promise.all([
-      Employee.countDocuments(),
-      Branch.countDocuments(),
-      Attendance.find(),
-      Leave.countDocuments({ status: "pending" }),
-      Candidate.countDocuments(),
-      Department.find(),
-    ]);
+    const user = req.user;
+    const role = (user.role || "").toLowerCase().trim();
 
-    // 2️⃣ Attendance rate
-    const totalAttendance = attendanceRecords.length;
-    const presentCount = attendanceRecords.filter(
-      (a) => a.status === "present"
-    ).length;
-    const attendanceRate = totalAttendance
-      ? ((presentCount / totalAttendance) * 100).toFixed(2)
-      : 0;
-
-    // 3️⃣ Department distribution for chart
-    const departmentDistribution = await Employee.aggregate([
-      { $group: { _id: "$department", count: { $sum: 1 } } },
-    ]);
-
-    // 4️⃣ Last 6 months Hiring Trend
-    const sixMonthsAgo = moment()
-      .subtract(6, "months")
-      .startOf("month")
-      .toDate();
-    const last6MonthsHiring = await Hiring.aggregate([
-      { $match: { createdAt: { $gte: sixMonthsAgo } } },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-          hires: { $sum: 1 },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]);
-
-    // 5️⃣ Candidate status
-    const candidateStatus = await Candidate.aggregate([
-      { $group: { _id: "$status", count: { $sum: 1 } } },
-    ]);
-
-    // 6️⃣ Leave types
-    const leaveTypes = await Leave.aggregate([
-      { $group: { _id: "$type", count: { $sum: 1 } } },
-    ]);
-
-    // 7️⃣ Recent records
-    const [
-      recentLeaves,
-      recentCandidates,
-      recentAnnouncements,
-      recentMeetings,
-    ] = await Promise.all([
-      Leave.find().sort({ createdAt: -1 }).limit(5),
-      Candidate.find().sort({ createdAt: -1 }).limit(5),
-      Announcement.find().sort({ createdAt: -1 }).limit(5),
-      Meeting.find().sort({ createdAt: -1 }).limit(5),
-    ]);
-
-    // 8️⃣ Employee growth for 2025 (monthly)
-    const employeeGrowth = await Employee.aggregate([
-      {
-        $match: {
-          createdAt: {
-            $gte: moment("2025-01-01").startOf("year").toDate(),
-            $lte: moment("2025-12-31").endOf("year").toDate(),
-          },
-        },
-      },
-      {
-        $group: {
-          _id: { $month: "$createdAt" },
-          count: { $sum: 1 },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]);
-
-    // 9️⃣ Send final response
-    sendResponse(res, 200, "Success", {
-      message: "Dashboard details retrieved successfully",
-      data: {
-        employees: { totalEmployee, attendanceRate },
-        branches: { totalBranch },
+    // 1️⃣ SUPER ADMIN DASHBOARD
+    if (role === "superadmin") {
+      const [
+        totalEmployee,
+        totalBranch,
+        attendanceRecords,
         pendingLeaves,
-        totalCandidate,
-        departmentDistribution,
-        last6MonthsHiring,
-        candidateStatus,
+        departmentList,
         leaveTypes,
-        recentLeaves,
-        recentCandidates,
-        recentAnnouncements,
-        recentMeetings,
-        employeeGrowth2025: employeeGrowth,
-      },
-      statusCode: 200,
-    });
+        leaveStats,
+        announcements,
+        meetings,
+      ] = await Promise.all([
+        Employee.countDocuments(),
+        Branch.countDocuments(),
+        AttendanceRecord.find(),
+        Leave.countDocuments({ status: "Pending" }),
+        Department.find(),
+        LeaveType.find({ status: true }), // ✅ Fetch all active leave types
+        Leave.aggregate([
+          { $group: { _id: "$type", count: { $sum: 1 } } },
+        ]), // ✅ Aggregate leave usage stats
+        Announcement.find({ status: true }).sort({ createdAt: -1 }).limit(5),
+        Meeting.find().sort({ createdAt: -1 }).limit(5),
+      ]);
+
+      // 🧮 Attendance Rate Calculation
+      const totalAttendance = attendanceRecords.length;
+      const presentCount = attendanceRecords.filter(
+        (a) => a.status === "Present"
+      ).length;
+      const attendanceRate = totalAttendance
+        ? ((presentCount / totalAttendance) * 100).toFixed(2)
+        : 0;
+
+      // 📊 Department Distribution
+      const departmentDistribution = await Employee.aggregate([
+        { $group: { _id: "$department", count: { $sum: 1 } } },
+      ]);
+      const populatedDept = await Department.populate(departmentDistribution, {
+        path: "_id",
+        select: "name",
+      });
+
+      // 🔹 Combine LeaveType with usage stats
+      const leaveTypeStats = leaveTypes.map((lt) => {
+        const stat = leaveStats.find(
+          (s) => s._id?.toString() === lt._id?.toString() || s._id === lt.leaveType
+        );
+        return {
+          leaveType: lt.leaveType,
+          maxDaysPerYear: lt.maxDaysPerYear,
+          color: lt.color,
+          isPaid: lt.isPaid,
+          usageCount: stat ? stat.count : 0,
+        };
+      });
+
+      // ✅ Final Response
+      return sendResponse(res, 200, "Success", {
+        message: "SuperAdmin Dashboard fetched successfully!",
+        data: {
+          totalEmployee,
+          totalBranch,
+          attendanceRate,
+          pendingLeaves,
+          departmentDistribution: populatedDept,
+          leaveTypes: leaveTypeStats,
+          announcements,
+          meetings,
+        },
+      });
+    }
+
+    // 2️⃣ EMPLOYEE DASHBOARD
+    if (role === "employee") {
+      const employee = await Employee.findOne({ email: user.email })
+        .populate("department", "name")
+        .populate("designation", "name")
+        .populate("branch", "branchName");
+
+      if (!employee) {
+        return sendResponse(res, 404, "Failed", { message: "Employee not found" });
+      }
+
+      const employeeId = employee._id;
+
+      const [attendance, awards, warnings, complaints, announcements, meetings] =
+        await Promise.all([
+          AttendanceRecord.find({ employee: employeeId })
+            .sort({ date: -1 })
+            .limit(5),
+          Award.find({ employee: employeeId }).sort({ createdAt: -1 }).limit(3),
+          Warning.find({ employee: employeeId }).sort({ createdAt: -1 }).limit(3),
+          Complaint.find({ employee: employeeId })
+            .sort({ createdAt: -1 })
+            .limit(3),
+          Announcement.find({
+            $or: [
+              { companyWideAnnouncement: true },
+              { targetBranches: employee.branch },
+              { targetDepartments: employee.department },
+            ],
+          })
+            .sort({ createdAt: -1 })
+            .limit(5),
+          Meeting.find({
+            $or: [
+              { organizer: employeeId },
+              { participants: { $in: [employeeId] } },
+            ],
+          })
+            .sort({ createdAt: -1 })
+            .limit(5),
+        ]);
+
+      // ✅ Employee Dashboard Response
+      return sendResponse(res, 200, "Success", {
+        message: "Employee Dashboard fetched successfully!",
+        data: {
+          employee: {
+            name: employee.fullName,
+            branch: employee.branch?.branchName,
+            department: employee.department?.name,
+            designation: employee.designation?.name,
+            employmentStatus: employee.employmentStatus,
+          },
+          attendance,
+          awards,
+          warnings,
+          complaints,
+          announcements,
+          meetings,
+        },
+      });
+    }
+
+    // 🚫 Unauthorized Role
+    return sendResponse(res, 403, "Failed", { message: "Access denied" });
   } catch (error) {
-    console.error(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal server error",
-      statusCode: 500,
-    });
+    console.error("Dashboard Error:", error);
+    sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
+
 
 module.exports = adminController;

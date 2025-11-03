@@ -65,7 +65,9 @@ attendanceRecordController.post("/list", auth, async (req, res) => {
     if (req.user.role === "employee") {
       const employeeDoc = await Employee.findOne({ email: req.user.email });
       if (!employeeDoc) {
-        return sendResponse(res, 404, "Failed", { message: "Employee profile not found" });
+        return sendResponse(res, 404, "Failed", {
+          message: "Employee profile not found",
+        });
       }
       query.employee = employeeDoc._id;
     } else {
@@ -106,7 +108,6 @@ attendanceRecordController.post("/list", auth, async (req, res) => {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
-
 
 attendanceRecordController.put("/update", async (req, res) => {
   try {
@@ -368,7 +369,7 @@ attendanceRecordController.get("/today", auth, async (req, res) => {
     if (!record) {
       return sendResponse(res, 404, "Failed", {
         message: "No attendance record found for today. Please check in first.",
-        statusCode:404,
+        statusCode: 404,
       });
     }
     const formatTo12Hour = (timeStr) => {
@@ -395,13 +396,15 @@ attendanceRecordController.get("/today", auth, async (req, res) => {
         notes: record.notes || "",
         employee: record.employee,
       },
-      statusCode:200,
+      statusCode: 200,
     });
   } catch (error) {
     console.error("Today's Attendance Fetch Error:", error);
-    sendResponse(res, 500, "Failed", { message: error.message, statusCode: 500, });
+    sendResponse(res, 500, "Failed", {
+      message: error.message,
+      statusCode: 500,
+    });
   }
 });
-
 
 module.exports = attendanceRecordController;

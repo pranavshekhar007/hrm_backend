@@ -4,6 +4,7 @@ require("dotenv").config();
 const Promotion = require("../model/promotion.schema");
 const cloudinary = require("../utils/cloudinary");
 const upload = require("../utils/multer");
+const auth = require("../utils/auth");
 
 const promotionController = express.Router();
 
@@ -55,7 +56,7 @@ promotionController.post(
   }
 );
 
-promotionController.post("/list", async (req, res) => {
+promotionController.post("/list", auth, async (req, res) => {
   try {
     const {
       searchKey = "",
@@ -69,18 +70,22 @@ promotionController.post("/list", async (req, res) => {
 
     const query = {};
 
-    if (employee) query.employee = employee;
-    if (status) query.status = status;
-    if (searchKey)
-      query.reasonForPromotion = { $regex: searchKey, $options: "i" };
+    // ✅ Restrict employee to their own promotion records
+    if (req.user?.role === "employee") {
+      query.employee = req.user._id;
+    } else {
+      if (employee) query.employee = employee;
+      if (status) query.status = status;
+      if (searchKey)
+        query.reasonForPromotion = { $regex: searchKey, $options: "i" };
+    }
 
     const sortField = sortByField || "createdAt";
     const sortOrder = sortByOrder === "asc" ? 1 : -1;
-    const sortOption = { [sortField]: sortOrder };
 
     const promotionList = await Promotion.find(query)
       .populate("employee newDesignation")
-      .sort(sortOption)
+      .sort({ [sortField]: sortOrder })
       .limit(parseInt(pageCount))
       .skip((pageNo - 1) * parseInt(pageCount));
 
@@ -90,15 +95,13 @@ promotionController.post("/list", async (req, res) => {
       message: "Promotion list retrieved successfully!",
       data: promotionList,
       total: totalCount,
-      statusCode: 200,
     });
   } catch (error) {
     console.error(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal Server Error",
-    });
+    sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
 
 promotionController.put(
   "/update",

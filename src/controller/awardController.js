@@ -4,6 +4,7 @@ require("dotenv").config();
 const Award = require("../model/award.schema");
 const cloudinary = require("../utils/cloudinary");
 const upload = require("../utils/multer");
+const auth = require("../utils/auth");
 const awardController = express.Router();
 
 awardController.post(
@@ -56,7 +57,7 @@ awardController.post(
   }
 );
 
-awardController.post("/list", async (req, res) => {
+awardController.post("/list", auth, async (req, res) => {
   try {
     const {
       searchKey = "",
@@ -69,18 +70,23 @@ awardController.post("/list", async (req, res) => {
     } = req.body;
 
     const query = {};
-    if (employee) query.employee = employee;
-    if (awardType) query.awardType = awardType;
-    if (searchKey)
-      query.description = { $regex: searchKey, $options: "i" };
+
+    // ✅ Restrict employee to only their own awards
+    if (req.user?.role === "employee") {
+      query.employee = req.user._id;
+    } else {
+      if (employee) query.employee = employee;
+      if (awardType) query.awardType = awardType;
+      if (searchKey)
+        query.description = { $regex: searchKey, $options: "i" };
+    }
 
     const sortField = sortByField || "createdAt";
     const sortOrder = sortByOrder === "asc" ? 1 : -1;
-    const sortOption = { [sortField]: sortOrder };
 
     const awardList = await Award.find(query)
       .populate("employee awardType")
-      .sort(sortOption)
+      .sort({ [sortField]: sortOrder })
       .limit(parseInt(pageCount))
       .skip((pageNo - 1) * parseInt(pageCount));
 
@@ -90,15 +96,13 @@ awardController.post("/list", async (req, res) => {
       message: "Award list retrieved successfully!",
       data: awardList,
       total: totalCount,
-      statusCode: 200,
     });
   } catch (error) {
     console.error(error);
-    sendResponse(res, 500, "Failed", {
-      message: error.message || "Internal server error",
-    });
+    sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
+
 
 awardController.put(
   "/update",
