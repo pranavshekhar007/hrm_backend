@@ -368,11 +368,16 @@ attendanceRecordController.get("/today", auth, async (req, res) => {
 
     const employeeId = employee._id;
 
-    const currentDate = new Date();
+    // 🕒 Always use IST-based date for consistency
+    const now = new Date();
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const istOffset = 5.5 * 60 * 60000;
+    const istDate = new Date(utc + istOffset);
+
     const startOfDay = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      currentDate.getDate()
+      istDate.getFullYear(),
+      istDate.getMonth(),
+      istDate.getDate()
     );
 
     const record = await AttendanceRecord.findOne({
@@ -380,12 +385,30 @@ attendanceRecordController.get("/today", auth, async (req, res) => {
       date: startOfDay,
     }).populate("employee", "fullName employeeId department");
 
+    // ✅ Handle case where user has NOT checked in yet
     if (!record) {
-      return sendResponse(res, 404, "Failed", {
-        message: "No attendance record found for today. Please check in first.",
-        statusCode: 404,
+      return sendResponse(res, 200, "Success", {
+        message: "No attendance record for today yet.",
+        data: {
+          hasCheckedIn: false,
+          hasCheckedOut: false,
+          date: startOfDay,
+          inTime: null,
+          outTime: null,
+          totalHours: null,
+          status: "Absent",
+          notes: "",
+          employee: {
+            fullName: employee.fullName,
+            employeeId: employee.employeeId,
+            department: employee.department,
+          },
+        },
+        statusCode: 200,
       });
     }
+
+    // ✅ If record found → format to 12-hour for frontend
     const formatTo12Hour = (timeStr) => {
       if (!timeStr) return null;
       const [hour, minute, second] = timeStr.split(":").map(Number);
@@ -402,11 +425,13 @@ attendanceRecordController.get("/today", auth, async (req, res) => {
     sendResponse(res, 200, "Success", {
       message: "Today's attendance details retrieved successfully!",
       data: {
+        hasCheckedIn: true,
+        hasCheckedOut: !!record.outTime,
         date: record.date,
         inTime: inTime12,
         outTime: outTime12,
         totalHours: record.totalHours || null,
-        status: record.status || "Absent",
+        status: record.status || "Present",
         notes: record.notes || "",
         employee: record.employee,
       },
