@@ -168,7 +168,6 @@ attendanceRecordController.post("/checkin", auth, async (req, res) => {
       });
     }
 
-    // 🧠 Get employee linked to user
     const employee = await Employee.findOne({ email: req.user.email });
     if (!employee) {
       return sendResponse(res, 404, "Failed", {
@@ -194,7 +193,9 @@ attendanceRecordController.post("/checkin", auth, async (req, res) => {
       });
     }
 
-    const inTime = currentDate.toTimeString().split(" ")[0].slice(0, 8);
+    // 🔹 Use IST-based time
+    const inTime = getISTTime();
+
     const record = await AttendanceRecord.create({
       employee: employeeId,
       date: dateOnly,
@@ -203,9 +204,8 @@ attendanceRecordController.post("/checkin", auth, async (req, res) => {
       notes: "Checked in",
     });
 
-    const populatedRecord = await AttendanceRecord.findById(
-      record._id
-    ).populate("employee", "fullName employeeId department");
+    const populatedRecord = await AttendanceRecord.findById(record._id)
+      .populate("employee", "fullName employeeId department");
 
     sendResponse(res, 200, "Success", {
       message: "Checked in successfully!",
@@ -225,7 +225,6 @@ attendanceRecordController.post("/checkout", auth, async (req, res) => {
       });
     }
 
-    // 🧠 Find actual Employee record first
     const employee = await Employee.findOne({ email: req.user.email });
     if (!employee) {
       return sendResponse(res, 404, "Failed", {
@@ -257,22 +256,24 @@ attendanceRecordController.post("/checkout", auth, async (req, res) => {
       });
     }
 
-    const outTime = currentDate.toTimeString().split(" ")[0].slice(0, 8);
+    // 🔹 Use IST-based time
+    const outTime = getISTTime();
+
     const [inH, inM] = record.inTime.split(":").map(Number);
     const [outH, outM] = outTime.split(":").map(Number);
     let diff = outH * 60 + outM - (inH * 60 + inM);
     if (diff < 0) diff += 24 * 60;
 
     const totalHours = (diff / 60).toFixed(2);
+
     record.outTime = outTime;
     record.totalHours = totalHours;
     record.notes = "Checked out";
 
     await record.save();
 
-    const populatedRecord = await AttendanceRecord.findById(
-      record._id
-    ).populate("employee", "fullName employeeId department");
+    const populatedRecord = await AttendanceRecord.findById(record._id)
+      .populate("employee", "fullName employeeId department");
 
     sendResponse(res, 200, "Success", {
       message: "Checked out successfully!",
