@@ -7,6 +7,19 @@ const auth = require("../utils/auth");
 const mongoose = require("mongoose");
 const Employee = require("../model/employee.schema");
 
+function getISTTime() {
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  const istOffset = 5.5 * 60 * 60000; // +5 hours 30 minutes
+  const istDate = new Date(utc + istOffset);
+
+  const hours = String(istDate.getHours()).padStart(2, "0");
+  const minutes = String(istDate.getMinutes()).padStart(2, "0");
+  const seconds = String(istDate.getSeconds()).padStart(2, "0");
+
+  return `${hours}:${minutes}:${seconds}`;
+}
+
 attendanceRecordController.post("/create", async (req, res) => {
   try {
     const { inTime, outTime, breakHours = 0 } = req.body;
