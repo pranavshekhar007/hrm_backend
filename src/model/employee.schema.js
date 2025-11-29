@@ -24,23 +24,15 @@ const employeeSchema = new mongoose.Schema({
     default: "Active",
   },
   shift: {
-    type: String,
-    enum: [
-      "Morning Shift (09:00 - 18:00)",
-      "Evening Shift (14:00 - 23:00)",
-      "Night Shift (22:00 - 07:00)",
-    ],
-    default: "Morning Shift (09:00 - 18:00)",
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Shift",
   },
+  
   attendancePolicy: {
-    type: String,
-    enum: [
-      "Standard Attendance Policy",
-      "Flexible Attendance Policy",
-      "Strict Attendance Policy",
-    ],
-    default: "Standard Attendance Policy",
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "AttendancePolicy",
   },
+  
   addressLine1: { type: String, trim: true },
   addressLine2: { type: String, trim: true },
   city: { type: String, trim: true },

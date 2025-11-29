@@ -7,6 +7,9 @@ const employeeController = express.Router();
 const cloudinary = require("../utils/cloudinary");
 const upload = require("../utils/multer");
 const auth = require("../utils/auth");
+const mongoose = require("mongoose");
+const Shift = require("../model/shift.schema");
+const AttendancePolicy = require("../model/attendancePolicy.schema");
 
 employeeController.post(
   "/create",
@@ -125,32 +128,38 @@ employeeController.put(
       const id = req.params.id || req.body._id;
       const employeeData = await Employee.findById(id);
       if (!employeeData) {
-        return sendResponse(res, 404, "Failed", { message: "Employee not found" });
+        return sendResponse(res, 404, "Failed", {
+          message: "Employee not found",
+        });
       }
 
+      // ✅ Handle profile image upload
       if (req.files?.profileImage) {
-        const uploaded = await cloudinary.uploader.upload(req.files.profileImage[0].path);
+        const uploaded = await cloudinary.uploader.upload(
+          req.files.profileImage[0].path
+        );
         req.body.profileImage = uploaded.url;
       }
+
+      // ✅ Handle documents update
       const currentDocs = employeeData.documents || [];
       const updatedDocs = [...currentDocs];
 
       if (req.files?.documents?.length > 0 && req.body.documentsData) {
         const documentsData = JSON.parse(req.body.documentsData);
-      
-        let fileIndex = 0; // To match files with documentData
+        let fileIndex = 0;
+
         for (let i = 0; i < documentsData.length; i++) {
           const docData = documentsData[i];
-      
           let uploadedUrl = docData.documentUrl || null;
+
           if (docData.file || req.files.documents[fileIndex]) {
             const file = req.files.documents[fileIndex];
             const uploaded = await cloudinary.uploader.upload(file.path);
             uploadedUrl = uploaded.url;
             fileIndex++;
           }
-      
-          // Push every document as new if _id is null
+
           if (!docData._id) {
             updatedDocs.push({
               documentType: docData.documentType,
@@ -158,7 +167,6 @@ employeeController.put(
               expiryDate: docData.expiryDate,
             });
           } else {
-            // Update existing document
             const existingIndex = updatedDocs.findIndex(
               (doc) => doc._id.toString() === docData._id
             );
@@ -172,22 +180,39 @@ employeeController.put(
           }
         }
       }
-      
 
       req.body.documents = updatedDocs;
 
-      // --------------------------
-      // Handle password hash
-      // --------------------------
+      // ✅ Handle password hashing
       if (req.body.password) {
         const salt = await bcrypt.genSalt(10);
         req.body.password = await bcrypt.hash(req.body.password, salt);
       }
 
-      // --------------------------
-      // Update employee
-      // --------------------------
-      const updatedEmployee = await Employee.findByIdAndUpdate(id, req.body, { new: true });
+      // Shift conversion
+      if (req.body.shift && !mongoose.Types.ObjectId.isValid(req.body.shift)) {
+        const foundShift = await Shift.findOne({ name: req.body.shift.trim() });
+        req.body.shift = foundShift ? foundShift._id : null;
+      }
+
+      // Attendance Policy conversion
+      if (
+        req.body.attendancePolicy &&
+        !mongoose.Types.ObjectId.isValid(req.body.attendancePolicy)
+      ) {
+        const foundPolicy = await AttendancePolicy.findOne({
+          name: req.body.attendancePolicy.trim(),
+        });
+        req.body.attendancePolicy = foundPolicy ? foundPolicy._id : null;
+      }
+
+      // ✅ Finally, update the employee
+      const updatedEmployee = await Employee.findByIdAndUpdate(id, req.body, {
+        new: true,
+      }).populate(
+        "branch department designation shift attendancePolicy documents.documentType"
+      );
+
       sendResponse(res, 200, "Success", {
         message: "Employee updated successfully!",
         data: updatedEmployee,
@@ -195,7 +220,9 @@ employeeController.put(
       });
     } catch (error) {
       console.error("Employee update error:", error);
-      sendResponse(res, 500, "Failed", { message: error.message || "Internal server error" });
+      sendResponse(res, 500, "Failed", {
+        message: error.message || "Internal server error",
+      });
     }
   }
 );
@@ -218,7 +245,9 @@ employeeController.put("/reset-password", async (req, res) => {
 
     const employee = await Employee.findById(employeeId);
     if (!employee) {
-      return sendResponse(res, 404, "Failed", { message: "Employee not found" });
+      return sendResponse(res, 404, "Failed", {
+        message: "Employee not found",
+      });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -303,22 +332,32 @@ employeeController.delete(
 employeeController.get("/details/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const employee = await Employee.findById(id)
-      .populate("branch department designation documents.documentType transfers");
+
+    // 🧩 Fetch employee and populate all related collections
+    const employee = await Employee.findById(id).populate([
+      { path: "branch", select: "branchName city state country" },
+      { path: "department", select: "name description" },
+      { path: "designation", select: "name description" },
+      { path: "shift", select: "name startTime endTime breakDuration nightShift" },
+      { path: "attendancePolicy", select: "name lateArrivalGrace earlyDepartureGrace overtimeRatePerHour" },
+      { path: "documents.documentType", select: "name" },
+      { path: "transfers" },
+    ]);
 
     if (!employee) {
       return sendResponse(res, 404, "Failed", { message: "Employee not found" });
     }
 
+    // ✅ Send populated data
     sendResponse(res, 200, "Success", {
       message: "Employee details fetched successfully!",
       data: employee,
     });
   } catch (error) {
+    console.error("Employee details error:", error);
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
-
 
 
 module.exports = employeeController;
