@@ -5,7 +5,6 @@ require("dotenv").config();
 
 const meetingRoomController = express.Router();
 
-// ✅ Create Meeting Room
 meetingRoomController.post("/create", async (req, res) => {
   try {
     const meetingRoom = await MeetingRoom.create(req.body);
@@ -19,7 +18,6 @@ meetingRoomController.post("/create", async (req, res) => {
   }
 });
 
-// ✅ List Meeting Rooms (with search, pagination, sort, filter by status/type)
 meetingRoomController.post("/list", async (req, res) => {
   try {
     const {
@@ -65,7 +63,6 @@ meetingRoomController.post("/list", async (req, res) => {
   }
 });
 
-// ✅ Get by ID
 meetingRoomController.get("/get/:id", async (req, res) => {
   try {
     const meetingRoom = await MeetingRoom.findById(req.params.id);
@@ -82,7 +79,6 @@ meetingRoomController.get("/get/:id", async (req, res) => {
   }
 });
 
-// ✅ Update Meeting Room
 meetingRoomController.put("/update/:id", async (req, res) => {
   try {
     const meetingRoom = await MeetingRoom.findByIdAndUpdate(req.params.id, req.body, {
@@ -101,7 +97,6 @@ meetingRoomController.put("/update/:id", async (req, res) => {
   }
 });
 
-// ✅ Change Status
 meetingRoomController.put("/change-status/:id", async (req, res) => {
   try {
     const { status } = req.body;
@@ -121,8 +116,6 @@ meetingRoomController.put("/change-status/:id", async (req, res) => {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
-
-// ✅ Delete Meeting Room
 meetingRoomController.delete("/delete/:id", async (req, res) => {
   try {
     const meetingRoom = await MeetingRoom.findByIdAndDelete(req.params.id);

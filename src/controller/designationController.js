@@ -130,7 +130,6 @@ designationController.delete("/delete/:id", async (req, res) => {
   }
 });
 
-// ✅ Get Designations by Department ID
 designationController.get("/by-department/:departmentId", async (req, res) => {
   try {
     const { departmentId } = req.params;

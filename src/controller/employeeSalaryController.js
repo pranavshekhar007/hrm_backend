@@ -5,7 +5,6 @@ require("dotenv").config();
 
 const employeeSalaryController = express.Router();
 
-// ✅ Create Employee Salary
 employeeSalaryController.post("/create", async (req, res) => {
   try {
     const salary = await EmployeeSalary.create(req.body);
@@ -19,7 +18,6 @@ employeeSalaryController.post("/create", async (req, res) => {
   }
 });
 
-// ✅ List Employee Salaries (with pagination, search, filter)
 employeeSalaryController.post("/list", async (req, res) => {
   try {
     const {
@@ -64,7 +62,6 @@ employeeSalaryController.post("/list", async (req, res) => {
   }
 });
 
-// ✅ Update Employee Salary
 employeeSalaryController.put("/update/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -87,7 +84,6 @@ employeeSalaryController.put("/update/:id", async (req, res) => {
   }
 });
 
-// ✅ Delete Employee Salary Record
 employeeSalaryController.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -107,7 +103,6 @@ employeeSalaryController.delete("/delete/:id", async (req, res) => {
   }
 });
 
-// ✅ Change Active Status
 employeeSalaryController.put("/change-status/:id", async (req, res) => {
   try {
     const { id } = req.params;

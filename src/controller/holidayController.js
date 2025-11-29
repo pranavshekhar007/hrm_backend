@@ -5,7 +5,6 @@ require("dotenv").config();
 
 const holidayController = express.Router();
 
-// ✅ Create Holiday
 holidayController.post("/create", async (req, res) => {
   try {
     const createdHoliday = await Holiday.create(req.body);
@@ -19,7 +18,6 @@ holidayController.post("/create", async (req, res) => {
   }
 });
 
-// ✅ List Holidays (filter, search, pagination)
 holidayController.post("/list", async (req, res) => {
   try {
     const {
@@ -64,7 +62,6 @@ holidayController.post("/list", async (req, res) => {
   }
 });
 
-// ✅ Update Holiday
 holidayController.put("/update/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -84,7 +81,6 @@ holidayController.put("/update/:id", async (req, res) => {
   }
 });
 
-// ✅ Delete Holiday
 holidayController.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -103,7 +99,6 @@ holidayController.delete("/delete/:id", async (req, res) => {
   }
 });
 
-// ✅ Change Holiday Status (Activate / Deactivate)
 holidayController.put("/change-status/:id", async (req, res) => {
   try {
     const { id } = req.params;

@@ -29,7 +29,6 @@ complaintController.post(
 
       const complaintData = { ...req.body };
 
-      // Handle file upload if present
       if (req.file) {
         const uploadedDoc = await cloudinary.uploader.upload(req.file.path, {
           folder: "complaints",
@@ -63,7 +62,6 @@ complaintController.post("/list", auth, async (req, res) => {
 
     const query = {};
 
-    // ✅ Restrict employees to complaints they filed or are involved in
     if (req.user?.role === "employee") {
       query.$or = [{ employee: req.user._id }, { against: req.user._id }];
     } else {

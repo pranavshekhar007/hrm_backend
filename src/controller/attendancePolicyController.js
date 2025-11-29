@@ -5,7 +5,6 @@ const AttendancePolicy = require("../model/attendancePolicy.schema");
 const attendancePolicyController = express.Router();
 const auth = require("../utils/auth");
 
-// Create Attendance Policy
 attendancePolicyController.post("/create", async (req, res) => {
   try {
     const policyCreated = await AttendancePolicy.create(req.body);
@@ -21,7 +20,6 @@ attendancePolicyController.post("/create", async (req, res) => {
   }
 });
 
-// List Attendance Policies (with search, pagination, sort)
 attendancePolicyController.post("/list", async (req, res) => {
   try {
     const {
@@ -65,7 +63,6 @@ attendancePolicyController.post("/list", async (req, res) => {
   }
 });
 
-// Update Attendance Policy
 attendancePolicyController.put("/update", async (req, res) => {
   try {
     const id = req.body._id;
@@ -88,7 +85,6 @@ attendancePolicyController.put("/update", async (req, res) => {
   }
 });
 
-// Delete Attendance Policy
 attendancePolicyController.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;

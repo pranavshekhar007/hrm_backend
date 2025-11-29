@@ -33,7 +33,6 @@ transferController.post("/create", upload.single("document"), async (req, res) =
       document = { fileUrl: result.secure_url, fileName: req.file.originalname };
     }
 
-    // ✅ Create transfer
     const newTransfer = await Transfer.create({
       employee,
       fromBranch: employeeExists.branch,
@@ -104,13 +103,11 @@ transferController.put("/update/:id", upload.single("document"), async (req, res
     const transfer = await Transfer.findById(id);
     if (!transfer) return sendResponse(res, 404, "Failed", { message: "Transfer not found" });
 
-    // ✅ Handle single file upload (replace existing)
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, { folder: "transfer_documents" });
       transfer.document = { fileUrl: result.secure_url, fileName: req.file.originalname };
     }
 
-    // Update other fields
     const { employee, branch, toDepartment, toDesignation, transferDate, effectiveDate, reason, status } = req.body;
     if (employee) transfer.employee = employee;
     if (branch) transfer.branch = branch;
@@ -148,16 +145,13 @@ transferController.put("/change-status/:id", async (req, res) => {
     if (!transfer)
       return sendResponse(res, 404, "Failed", { message: "Transfer not found" });
 
-    // Only update employee details if Approved
     if (status === "Approved") {
       const employee = transfer.employee;
 
-      // Update employee current branch/department/designation
       employee.branch = transfer.toBranch;
       employee.department = transfer.toDepartment;
       employee.designation = transfer.toDesignation;
 
-      // Add transfer to employee's transfers array if not already present
       if (!employee.transfers.includes(transfer._id)) {
         employee.transfers.push(transfer._id);
       }
@@ -165,7 +159,6 @@ transferController.put("/change-status/:id", async (req, res) => {
       await employee.save();
     }
 
-    // Update transfer status
     transfer.status = status;
     const updatedTransfer = await transfer.save();
 
@@ -180,7 +173,6 @@ transferController.put("/change-status/:id", async (req, res) => {
 });
 
 
-// ✅ Delete Transfer
 transferController.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;

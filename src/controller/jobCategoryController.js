@@ -5,7 +5,6 @@ require("dotenv").config();
 
 const jobCategoryController = express.Router();
 
-// ✅ Create Job Category
 jobCategoryController.post("/create", async (req, res) => {
   try {
     const category = await JobCategory.create(req.body);
@@ -19,7 +18,6 @@ jobCategoryController.post("/create", async (req, res) => {
   }
 });
 
-// ✅ List Job Categories
 jobCategoryController.post("/list", async (req, res) => {
   try {
     const {
@@ -56,7 +54,6 @@ jobCategoryController.post("/list", async (req, res) => {
   }
 });
 
-// ✅ Update Job Category
 jobCategoryController.put("/update/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -78,7 +75,6 @@ jobCategoryController.put("/update/:id", async (req, res) => {
   }
 });
 
-// ✅ Delete Job Category
 jobCategoryController.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -96,8 +92,6 @@ jobCategoryController.delete("/delete/:id", async (req, res) => {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
-
-// ✅ Change Status
 jobCategoryController.put("/change-status/:id", async (req, res) => {
   try {
     const { id } = req.params;

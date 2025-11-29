@@ -71,7 +71,6 @@ awardController.post("/list", auth, async (req, res) => {
 
     const query = {};
 
-    // ✅ Restrict employee to only their own awards
     if (req.user?.role === "employee") {
       query.employee = req.user._id;
     } else {

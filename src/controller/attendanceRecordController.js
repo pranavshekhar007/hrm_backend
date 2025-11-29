@@ -10,7 +10,7 @@ const Employee = require("../model/employee.schema");
 function getISTTime() {
   const now = new Date();
   const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  const istOffset = 5.5 * 60 * 60000; // +5 hours 30 minutes
+  const istOffset = 5.5 * 60 * 60000;
   const istDate = new Date(utc + istOffset);
 
   const hours = String(istDate.getHours()).padStart(2, "0");
@@ -26,7 +26,6 @@ attendanceRecordController.post("/create", async (req, res) => {
 
     let totalHours = 0;
 
-    // Calculate total working time if inTime and outTime are provided
     if (inTime && outTime) {
       const [inH, inM] = inTime.split(":").map(Number);
       const [outH, outM] = outTime.split(":").map(Number);
@@ -74,7 +73,6 @@ attendanceRecordController.post("/list", auth, async (req, res) => {
 
     const query = {};
 
-    // 🧠 Fix: Find the linked employee by email (not user._id)
     if (req.user.role === "employee") {
       const employeeDoc = await Employee.findOne({ email: req.user.email });
       if (!employeeDoc) {
@@ -84,7 +82,6 @@ attendanceRecordController.post("/list", auth, async (req, res) => {
       }
       query.employee = employeeDoc._id;
     } else {
-      // Admin / HR filters
       if (employee) query.employee = employee;
     }
 
@@ -206,7 +203,6 @@ attendanceRecordController.post("/checkin", auth, async (req, res) => {
       });
     }
 
-    // 🔹 Use IST-based time
     const inTime = getISTTime();
 
     const record = await AttendanceRecord.create({
@@ -269,7 +265,6 @@ attendanceRecordController.post("/checkout", auth, async (req, res) => {
       });
     }
 
-    // 🔹 Use IST-based time
     const outTime = getISTTime();
 
     const [inH, inM] = record.inTime.split(":").map(Number);
@@ -368,7 +363,6 @@ attendanceRecordController.get("/today", auth, async (req, res) => {
 
     const employeeId = employee._id;
 
-    // 🕒 Always use IST-based date for consistency
     const now = new Date();
     const utc = now.getTime() + now.getTimezoneOffset() * 60000;
     const istOffset = 5.5 * 60 * 60000;
@@ -385,7 +379,6 @@ attendanceRecordController.get("/today", auth, async (req, res) => {
       date: startOfDay,
     }).populate("employee", "fullName employeeId department");
 
-    // ✅ Handle case where user has NOT checked in yet
     if (!record) {
       return sendResponse(res, 200, "Success", {
         message: "No attendance record for today yet.",
@@ -408,7 +401,6 @@ attendanceRecordController.get("/today", auth, async (req, res) => {
       });
     }
 
-    // ✅ If record found → format to 12-hour for frontend
     const formatTo12Hour = (timeStr) => {
       if (!timeStr) return null;
       const [hour, minute, second] = timeStr.split(":").map(Number);

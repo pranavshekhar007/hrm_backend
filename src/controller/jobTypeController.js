@@ -5,7 +5,6 @@ require("dotenv").config();
 
 const jobTypeController = express.Router();
 
-// ✅ Create Job Type
 jobTypeController.post("/create", async (req, res) => {
   try {
     const jobType = await JobType.create(req.body);
@@ -19,7 +18,6 @@ jobTypeController.post("/create", async (req, res) => {
   }
 });
 
-// ✅ List Job Types
 jobTypeController.post("/list", async (req, res) => {
   try {
     const {
@@ -59,7 +57,6 @@ jobTypeController.post("/list", async (req, res) => {
   }
 });
 
-// ✅ Update Job Type
 jobTypeController.put("/update/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -76,8 +73,6 @@ jobTypeController.put("/update/:id", async (req, res) => {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
-
-// ✅ Delete Job Type
 jobTypeController.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -94,7 +89,6 @@ jobTypeController.delete("/delete/:id", async (req, res) => {
   }
 });
 
-// ✅ Change Status
 jobTypeController.put("/change-status/:id", async (req, res) => {
   try {
     const { id } = req.params;

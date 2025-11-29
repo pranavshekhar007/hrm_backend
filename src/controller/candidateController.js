@@ -5,7 +5,6 @@ require("dotenv").config();
 
 const candidateController = express.Router();
 
-// ✅ Create Candidate
 candidateController.post("/create", async (req, res) => {
   try {
     const candidate = await Candidate.create(req.body);
@@ -19,7 +18,6 @@ candidateController.post("/create", async (req, res) => {
   }
 });
 
-// ✅ Get All Candidates (with pagination, search, and filters)
 candidateController.post("/list", async (req, res) => {
   try {
     const {
@@ -71,7 +69,6 @@ candidateController.post("/list", async (req, res) => {
   }
 });
 
-// ✅ Get Candidate by ID
 candidateController.get("/get/:id", async (req, res) => {
   try {
     const candidate = await Candidate.findById(req.params.id)
@@ -92,7 +89,6 @@ candidateController.get("/get/:id", async (req, res) => {
   }
 });
 
-// ✅ Update Candidate
 candidateController.put("/update/:id", async (req, res) => {
   try {
     const candidate = await Candidate.findByIdAndUpdate(req.params.id, req.body, {
@@ -111,7 +107,6 @@ candidateController.put("/update/:id", async (req, res) => {
   }
 });
 
-// ✅ Change Candidate Status
 candidateController.put("/change-status/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -134,7 +129,6 @@ candidateController.put("/change-status/:id", async (req, res) => {
   }
 });
 
-// ✅ Delete Candidate
 candidateController.delete("/delete/:id", async (req, res) => {
   try {
     const candidate = await Candidate.findByIdAndDelete(req.params.id);

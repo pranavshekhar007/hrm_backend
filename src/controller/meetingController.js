@@ -6,7 +6,6 @@ require("dotenv").config();
 
 const meetingController = express.Router();
 
-// ✅ Create Meeting
 meetingController.post("/create", async (req, res) => {
   try {
     const meeting = await Meeting.create(req.body);
@@ -39,11 +38,9 @@ meetingController.post("/list", auth, async (req, res) => {
   
       const query = {};
   
-      // ✅ Restrict employees to see only their own meetings
       if (req.user?.role === "employee") {
         query.organizer = req.user._id;
       } else {
-        // 🔹 Admin / HR can use all filters
         if (meetingType) query.meetingType = meetingType;
         if (meetingRoom) query.meetingRoom = meetingRoom;
         if (organizer) query.organizer = organizer;
@@ -51,7 +48,6 @@ meetingController.post("/list", auth, async (req, res) => {
         if (status !== undefined) query.status = status;
       }
   
-      // 🔹 Date Range Filter
       if (startDate && endDate) {
         query.meetingDate = {
           $gte: new Date(startDate),
@@ -59,7 +55,6 @@ meetingController.post("/list", auth, async (req, res) => {
         };
       }
   
-      // 🔹 Search by title, description, or agenda
       if (searchKey) {
         query.$or = [
           { title: { $regex: searchKey, $options: "i" } },
@@ -94,7 +89,6 @@ meetingController.post("/list", auth, async (req, res) => {
   });
   
 
-// ✅ Get Meeting by ID
 meetingController.get("/get/:id", async (req, res) => {
   try {
     const meeting = await Meeting.findById(req.params.id)
@@ -115,7 +109,6 @@ meetingController.get("/get/:id", async (req, res) => {
   }
 });
 
-// ✅ Update Meeting
 meetingController.put("/update/:id", async (req, res) => {
   try {
     const meeting = await Meeting.findByIdAndUpdate(req.params.id, req.body, {
@@ -134,7 +127,6 @@ meetingController.put("/update/:id", async (req, res) => {
   }
 });
 
-// ✅ Change Status (Active/Cancelled)
 meetingController.put("/change-status/:id", async (req, res) => {
   try {
     const { status } = req.body;
@@ -155,7 +147,6 @@ meetingController.put("/change-status/:id", async (req, res) => {
   }
 });
 
-// ✅ Delete Meeting
 meetingController.delete("/delete/:id", async (req, res) => {
   try {
     const meeting = await Meeting.findByIdAndDelete(req.params.id);

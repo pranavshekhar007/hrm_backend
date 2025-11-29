@@ -80,11 +80,9 @@ employeeController.post("/list", auth, async (req, res) => {
 
     const query = {};
 
-    // ✅ Restrict employee role to their own data only
     if (req.user?.role === "employee") {
       query.email = req.user.email;
     } else {
-      // 🔹 Admins can still apply filters
       if (branch) query.branch = branch;
       if (department) query.department = department;
       if (designation) query.designation = designation;
@@ -133,7 +131,6 @@ employeeController.put(
         });
       }
 
-      // ✅ Handle profile image upload
       if (req.files?.profileImage) {
         const uploaded = await cloudinary.uploader.upload(
           req.files.profileImage[0].path
@@ -141,7 +138,6 @@ employeeController.put(
         req.body.profileImage = uploaded.url;
       }
 
-      // ✅ Handle documents update
       const currentDocs = employeeData.documents || [];
       const updatedDocs = [...currentDocs];
 
@@ -183,19 +179,16 @@ employeeController.put(
 
       req.body.documents = updatedDocs;
 
-      // ✅ Handle password hashing
       if (req.body.password) {
         const salt = await bcrypt.genSalt(10);
         req.body.password = await bcrypt.hash(req.body.password, salt);
       }
 
-      // Shift conversion
       if (req.body.shift && !mongoose.Types.ObjectId.isValid(req.body.shift)) {
         const foundShift = await Shift.findOne({ name: req.body.shift.trim() });
         req.body.shift = foundShift ? foundShift._id : null;
       }
 
-      // Attendance Policy conversion
       if (
         req.body.attendancePolicy &&
         !mongoose.Types.ObjectId.isValid(req.body.attendancePolicy)
@@ -206,7 +199,6 @@ employeeController.put(
         req.body.attendancePolicy = foundPolicy ? foundPolicy._id : null;
       }
 
-      // ✅ Finally, update the employee
       const updatedEmployee = await Employee.findByIdAndUpdate(id, req.body, {
         new: true,
       }).populate(
@@ -332,8 +324,6 @@ employeeController.delete(
 employeeController.get("/details/:id", async (req, res) => {
   try {
     const { id } = req.params;
-
-    // 🧩 Fetch employee and populate all related collections
     const employee = await Employee.findById(id).populate([
       { path: "branch", select: "branchName city state country" },
       { path: "department", select: "name description" },
@@ -348,7 +338,6 @@ employeeController.get("/details/:id", async (req, res) => {
       return sendResponse(res, 404, "Failed", { message: "Employee not found" });
     }
 
-    // ✅ Send populated data
     sendResponse(res, 200, "Success", {
       message: "Employee details fetched successfully!",
       data: employee,

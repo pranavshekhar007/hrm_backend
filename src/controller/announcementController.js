@@ -40,7 +40,6 @@ announcementController.post(
   }
 );
 
-// ✅ List Announcements (with filters & pagination)
 announcementController.post("/list", async (req, res) => {
   try {
     const {
@@ -95,14 +94,12 @@ announcementController.put(
     try {
       const { id } = req.params;
 
-      // Check if the announcement exists
       const announcement = await Announcement.findById(id);
       if (!announcement)
         return sendResponse(res, 404, "Failed", {
           message: "Announcement not found",
         });
 
-      // Upload new file if provided
       if (req.file) {
         const result = await cloudinary.uploader.upload(req.file.path, {
           folder: "announcements",
@@ -151,7 +148,6 @@ announcementController.delete("/delete/:id", async (req, res) => {
   }
 });
 
-// ✅ Change Announcement Status (Activate/Deactivate)
 announcementController.put("/change-status/:id", async (req, res) => {
   try {
     const { id } = req.params;

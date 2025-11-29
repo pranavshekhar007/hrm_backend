@@ -6,7 +6,6 @@ const AttendanceRecord = require("../model/attendanceRecord.schema");
 const attendanceRegularizationController = express.Router();
 const auth = require("../utils/auth");
 
-// Create Regularization Request
 attendanceRegularizationController.post("/create", async (req, res) => {
   try {
     const request = await AttendanceRegularization.create(req.body);
@@ -22,7 +21,6 @@ attendanceRegularizationController.post("/create", async (req, res) => {
   }
 });
 
-// List Requests (with filters, pagination, search)
 attendanceRegularizationController.post("/list", async (req, res) => {
   try {
     const {
@@ -68,7 +66,6 @@ attendanceRegularizationController.post("/list", async (req, res) => {
   }
 });
 
-// Update Regularization Request
 attendanceRegularizationController.put("/update", async (req, res) => {
   try {
     const id = req.body._id;
@@ -97,7 +94,6 @@ attendanceRegularizationController.put("/update", async (req, res) => {
   }
 });
 
-// Delete Regularization Request
 attendanceRegularizationController.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -121,7 +117,6 @@ attendanceRegularizationController.delete("/delete/:id", async (req, res) => {
   }
 });
 
-// ✅ Approve/Reject Regularization Request
 attendanceRegularizationController.put("/update-status/:id", async (req, res) => {
   try {
     const { id } = req.params;

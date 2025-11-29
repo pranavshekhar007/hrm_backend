@@ -61,7 +61,6 @@ userController.post("/create", async (req, res) => {
   }
 });
 
-// ✅ Register (Public)
 userController.post("/register", async (req, res) => {
   try {
     const { name, email, phone, password, confirmPassword, role } = req.body;
@@ -121,7 +120,6 @@ userController.post("/list", async (req, res) => {
       sortByOrder = "desc",
     } = req.body;
 
-    // ✅ Fallback for invalid or empty sort field
     if (
       !sortByField ||
       typeof sortByField !== "string" ||
@@ -130,12 +128,10 @@ userController.post("/list", async (req, res) => {
       sortByField = "createdAt";
     }
 
-    // ✅ Build query dynamically
     const query = {};
     if (role) query.role = role;
     if (department) query.department = department;
 
-    // ✅ Only add status if it's explicitly true or false
     if (status === true || status === false) {
       query.status = status;
     } else if (status === "true" || status === "false") {
@@ -150,10 +146,8 @@ userController.post("/list", async (req, res) => {
       ];
     }
 
-    // ✅ Sorting options
     const sortOption = { [sortByField]: sortByOrder === "asc" ? 1 : -1 };
 
-    // ✅ Fetch data with pagination
     const users = await User.find(query)
       .populate("role")
       .sort(sortOption)
@@ -177,7 +171,6 @@ userController.post("/list", async (req, res) => {
   }
 });
 
-// ✅ Update User by ID
 userController.put("/update/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -247,7 +240,6 @@ userController.post("/login", async (req, res) => {
   }
 });
 
-// ✅ Reset Password
 userController.post("/reset-password/:id", auth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -286,7 +278,6 @@ userController.post("/reset-password/:id", auth, async (req, res) => {
 });
 
 
-// ✅ Delete User by ID
 userController.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -322,7 +313,6 @@ userController.delete("/delete/:id", async (req, res) => {
 
 userController.get("/dashboard-details", async (req, res) => {
   try {
-    // 1️⃣ Parallel counts
     const [
       totalEmployee,
       totalBranch,
@@ -339,17 +329,14 @@ userController.get("/dashboard-details", async (req, res) => {
       Department.find(),
     ]);
 
-    // 2️⃣ Attendance rate
     const totalAttendance = attendanceRecords.length;
     const presentCount = attendanceRecords.filter(a => a.status === "present").length;
     const attendanceRate = totalAttendance ? ((presentCount / totalAttendance) * 100).toFixed(2) : 0;
 
-    // 3️⃣ Department distribution for chart
     const departmentDistribution = await Employee.aggregate([
       { $group: { _id: "$department", count: { $sum: 1 } } }
     ]);
 
-    // 4️⃣ Last 6 months Hiring Trend
     const sixMonthsAgo = moment().subtract(6, "months").startOf("month").toDate();
     const last6MonthsHiring = await Hiring.aggregate([
       { $match: { createdAt: { $gte: sixMonthsAgo } } },
@@ -357,17 +344,14 @@ userController.get("/dashboard-details", async (req, res) => {
       { $sort: { _id: 1 } },
     ]);
 
-    // 5️⃣ Candidate status
     const candidateStatus = await Candidate.aggregate([
       { $group: { _id: "$status", count: { $sum: 1 } } }
     ]);
 
-    // 6️⃣ Leave types
     const leaveTypes = await Leave.aggregate([
       { $group: { _id: "$type", count: { $sum: 1 } } }
     ]);
 
-    // 7️⃣ Recent records
     const [recentLeaves, recentCandidates, recentAnnouncements, recentMeetings] = await Promise.all([
       Leave.find().sort({ createdAt: -1 }).limit(5),
       Candidate.find().sort({ createdAt: -1 }).limit(5),
@@ -375,7 +359,6 @@ userController.get("/dashboard-details", async (req, res) => {
       Meeting.find().sort({ createdAt: -1 }).limit(5),
     ]);
 
-    // 8️⃣ Employee growth for 2025 (monthly)
     const employeeGrowth = await Employee.aggregate([
       {
         $match: {
@@ -394,7 +377,6 @@ userController.get("/dashboard-details", async (req, res) => {
       { $sort: { "_id": 1 } }
     ]);
 
-    // 9️⃣ Send final response
     sendResponse(res, 200, "Success", {
       message: "Dashboard details retrieved successfully",
       data: {

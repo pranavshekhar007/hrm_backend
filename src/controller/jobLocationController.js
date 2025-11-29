@@ -5,7 +5,6 @@ require("dotenv").config();
 
 const jobLocationController = express.Router();
 
-// ✅ Create Job Location
 jobLocationController.post("/create", async (req, res) => {
   try {
     const location = await JobLocation.create(req.body);
@@ -19,7 +18,6 @@ jobLocationController.post("/create", async (req, res) => {
   }
 });
 
-// ✅ List Job Locations
 jobLocationController.post("/list", async (req, res) => {
   try {
     const {
@@ -58,7 +56,6 @@ jobLocationController.post("/list", async (req, res) => {
   }
 });
 
-// ✅ Update Job Location
 jobLocationController.put("/update/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -76,7 +73,6 @@ jobLocationController.put("/update/:id", async (req, res) => {
   }
 });
 
-// ✅ Delete Job Location
 jobLocationController.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -92,8 +88,6 @@ jobLocationController.delete("/delete/:id", async (req, res) => {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
-
-// ✅ Change Status
 jobLocationController.put("/change-status/:id", async (req, res) => {
   try {
     const { id } = req.params;

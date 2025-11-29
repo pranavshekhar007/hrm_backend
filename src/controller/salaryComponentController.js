@@ -5,7 +5,6 @@ require("dotenv").config();
 
 const salaryComponentController = express.Router();
 
-// ✅ Create Salary Component
 salaryComponentController.post("/create", async (req, res) => {
   try {
     const createdComponent = await SalaryComponent.create(req.body);
@@ -19,7 +18,6 @@ salaryComponentController.post("/create", async (req, res) => {
   }
 });
 
-// ✅ List Salary Components (with filters & pagination)
 salaryComponentController.post("/list", async (req, res) => {
   try {
     const {
@@ -64,7 +62,6 @@ salaryComponentController.post("/list", async (req, res) => {
   }
 });
 
-// ✅ Update Salary Component
 salaryComponentController.put("/update/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -86,7 +83,6 @@ salaryComponentController.put("/update/:id", async (req, res) => {
   }
 });
 
-// ✅ Delete Salary Component
 salaryComponentController.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -104,8 +100,6 @@ salaryComponentController.delete("/delete/:id", async (req, res) => {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
-
-// ✅ Change Status (Active / Inactive)
 salaryComponentController.put("/change-status/:id", async (req, res) => {
   try {
     const { id } = req.params;

@@ -5,7 +5,6 @@ const Shift = require("../model/shift.schema");
 const shiftController = express.Router();
 const auth = require("../utils/auth");
 
-// Create Shift
 shiftController.post("/create", async (req, res) => {
   try {
     const shiftCreated = await Shift.create(req.body);
@@ -21,7 +20,6 @@ shiftController.post("/create", async (req, res) => {
   }
 });
 
-// List Shifts (with search, pagination, sort)
 shiftController.post("/list", async (req, res) => {
   try {
     const {
@@ -65,7 +63,6 @@ shiftController.post("/list", async (req, res) => {
   }
 });
 
-// Update Shift
 shiftController.put("/update", async (req, res) => {
   try {
     const id = req.body._id;
@@ -88,7 +85,6 @@ shiftController.put("/update", async (req, res) => {
   }
 });
 
-// Delete Shift
 shiftController.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;

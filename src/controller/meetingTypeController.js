@@ -5,7 +5,6 @@ require("dotenv").config();
 
 const meetingTypeController = express.Router();
 
-// ✅ Create Meeting Type
 meetingTypeController.post("/create", async (req, res) => {
   try {
     const meetingType = await MeetingType.create(req.body);
@@ -18,8 +17,6 @@ meetingTypeController.post("/create", async (req, res) => {
     sendResponse(res, 500, "Failed", { message: error.message });
   }
 });
-
-// ✅ List Meeting Types (search, pagination, sort)
 meetingTypeController.post("/list", async (req, res) => {
   try {
     const {
@@ -62,7 +59,6 @@ meetingTypeController.post("/list", async (req, res) => {
   }
 });
 
-// ✅ Get by ID
 meetingTypeController.get("/get/:id", async (req, res) => {
   try {
     const meetingType = await MeetingType.findById(req.params.id);
@@ -79,7 +75,6 @@ meetingTypeController.get("/get/:id", async (req, res) => {
   }
 });
 
-// ✅ Update Meeting Type
 meetingTypeController.put("/update/:id", async (req, res) => {
   try {
     const meetingType = await MeetingType.findByIdAndUpdate(req.params.id, req.body, {
@@ -98,7 +93,6 @@ meetingTypeController.put("/update/:id", async (req, res) => {
   }
 });
 
-// ✅ Change Status
 meetingTypeController.put("/change-status/:id", async (req, res) => {
   try {
     const { status } = req.body;
@@ -119,7 +113,6 @@ meetingTypeController.put("/change-status/:id", async (req, res) => {
   }
 });
 
-// ✅ Delete Meeting Type
 meetingTypeController.delete("/delete/:id", async (req, res) => {
   try {
     const meetingType = await MeetingType.findByIdAndDelete(req.params.id);

@@ -102,7 +102,7 @@ warningController.put("/update", upload.single("document"), async (req, res) => 
     if (!existingWarning)
       return sendResponse(res, 404, "Failed", { message: "Warning not found" });
 
-    let documentData = existingWarning.document; // keep old document by default
+    let documentData = existingWarning.document;
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {
         folder: "warnings",

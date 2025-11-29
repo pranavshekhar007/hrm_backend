@@ -170,7 +170,6 @@ leaveApplicationController.delete("/delete/:id", async (req, res) => {
   }
 });
 
-// Update Leave Application Status (Approved / Rejected / Pending)
 leaveApplicationController.put("/update-status/:id", async (req, res) => {
     try {
       const { id } = req.params;

@@ -24,13 +24,11 @@ const Warning = require("../model/warning.schema");
 const Complaint = require("../model/complaint.schema");
 const Award = require("../model/award.schema");
 const LeaveType = require("../model/leaveType.schema"); 
-// ... (imports remain the same)
 
 adminController.post("/create", async (req, res) => {
   try {
     const { name, email, phone, password, confirmPassword, role } = req.body;
 
-    // 🔹 Validate required fields
     if (!name || !email || !password || !confirmPassword || !phone || !role) {
       return sendResponse(res, 422, "Failed", {
         message: "All fields are required",
@@ -43,7 +41,6 @@ adminController.post("/create", async (req, res) => {
       });
     }
 
-    // 🔹 Check existing email in Admin or Employee
     const existingAdmin = await Admin.findOne({ email });
     const existingEmployee = await Employee.findOne({ email });
     if (existingAdmin || existingEmployee) {
@@ -54,7 +51,6 @@ adminController.post("/create", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 🔹 Create Admin record first
     const newAdmin = await Admin.create({
       name,
       email,
@@ -64,12 +60,10 @@ adminController.post("/create", async (req, res) => {
       status: true,
     });
 
-    // 🔹 If the role is Employee — create a linked Employee using SAME _id
-    const roleDoc = await Role.findById(role); // make sure Role model is imported
+    const roleDoc = await Role.findById(role);
     if (roleDoc && roleDoc.name.toLowerCase() === "employee") {
       const newEmployeeId = `EMP-${Math.floor(Math.random() * 100000) + 1000}`;
 
-      // 👇 use same _id as Admin
       await Employee.create({
         _id: newAdmin._id,
         fullName: name,
@@ -81,7 +75,6 @@ adminController.post("/create", async (req, res) => {
       });
     }
 
-    // 🔹 Generate JWT
     const token = jwt.sign(
       { id: newAdmin._id, email: newAdmin.email, role: newAdmin.role },
       process.env.JWT_KEY
@@ -98,21 +91,17 @@ adminController.post("/create", async (req, res) => {
   }
 });
 
-// ... (remaining adminController endpoints remain the same)
-
 adminController.put("/update/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { name, email, phone, role, status } = req.body;
 
-    // 🔹 Check if at least one field is provided
     if (!name && !email && !phone && !role && status === undefined) {
       return sendResponse(res, 422, "Failed", {
         message: "At least one field is required to update",
       });
     }
 
-    // 🔹 Build update object dynamically
     const updateData = {};
     if (name) updateData.name = name;
     if (email) updateData.email = email;
@@ -120,7 +109,6 @@ adminController.put("/update/:id", async (req, res) => {
     if (role) updateData.role = role;
     if (status !== undefined) updateData.status = status;
 
-    // 🔹 Update admin
     const updatedAdmin = await Admin.findByIdAndUpdate(id, updateData, {
       new: true,
     }).populate("role");
@@ -129,7 +117,6 @@ adminController.put("/update/:id", async (req, res) => {
       return sendResponse(res, 404, "Failed", { message: "Admin not found" });
     }
 
-    // 🔹 Success response
     sendResponse(res, 200, "Success", {
       message: "Admin updated successfully!",
       data: updatedAdmin,
@@ -171,7 +158,6 @@ adminController.post("/login", async (req, res) => {
   try {
     const { email, password, deviceId } = req.body;
 
-    // Step 1: Find user and populate deeply
     const user = await Admin.findOne({ email })
       .populate({
         path: "role",
@@ -188,7 +174,6 @@ adminController.post("/login", async (req, res) => {
       });
     }
 
-    // Step 2: Verify password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return sendResponse(res, 422, "Failed", {
@@ -196,13 +181,11 @@ adminController.post("/login", async (req, res) => {
       });
     }
 
-    // Step 3: Generate token
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role?._id },
       process.env.JWT_KEY
     );
 
-    // Step 4: Update deviceId
     const updatedAdmin = await Admin.findByIdAndUpdate(
       user._id,
       { deviceId },
@@ -216,23 +199,18 @@ adminController.post("/login", async (req, res) => {
         },
       })
       .lean();
-
-    // Step 5: Transform permissions (keep selectedActions from DB)
     const transformedRole = {
       ...updatedAdmin.role,
       permissions: updatedAdmin.role.permissions.map((perm) => ({
         ...perm,
-        // ✅ keep real selectedActions if present, fallback to empty []
         selectedActions:
           perm.selectedActions && perm.selectedActions.length
             ? perm.selectedActions
-            : perm.actions || [], // if still not present, fallback to actions
-        // Optional: remove raw `actions` if not needed
+            : perm.actions || [], 
         actions: undefined,
       })),
     };
 
-    // Step 6: Send response
     return sendResponse(res, 200, "Success", {
       message: "User logged in successfully",
       data: {
@@ -272,12 +250,10 @@ adminController.post("/list", async (req, res) => {
       ];
     }
 
-    // Construct sorting object
     const sortField = sortByField || "createdAt";
     const sortOrder = sortByOrder === "asc" ? 1 : -1;
     const sortOption = { [sortField]: sortOrder };
 
-    // Fetch the category list
     const adminList = await Admin.find(query)
       .sort(sortOption)
       .limit(parseInt(pageCount))
@@ -306,7 +282,6 @@ adminController.post("/reset-password", async (req, res) => {
   try {
     const { adminId, newPassword, confirmPassword } = req.body;
 
-    // 🔹 Validation
     if (!adminId || !newPassword || !confirmPassword) {
       return sendResponse(res, 422, "Failed", {
         message: "adminId, newPassword and confirmPassword are required",
@@ -321,10 +296,8 @@ adminController.post("/reset-password", async (req, res) => {
       });
     }
 
-    // 🔹 Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // 🔹 Update password
     const updatedAdmin = await Admin.findByIdAndUpdate(
       adminId,
       { password: hashedPassword },
@@ -338,7 +311,6 @@ adminController.post("/reset-password", async (req, res) => {
       });
     }
 
-    // 🔹 Success response
     sendResponse(res, 200, "Success", {
       message: "Password updated successfully",
       data: { _id: updatedAdmin._id, email: updatedAdmin.email },
@@ -358,7 +330,6 @@ adminController.get("/dashboard-details", auth, async (req, res) => {
     const user = req.user;
     const role = (user.role || "").toLowerCase().trim();
 
-    // 1️⃣ SUPER ADMIN DASHBOARD
     if (role === "superadmin") {
       const [
         totalEmployee,
@@ -376,15 +347,14 @@ adminController.get("/dashboard-details", auth, async (req, res) => {
         AttendanceRecord.find(),
         Leave.countDocuments({ status: "Pending" }),
         Department.find(),
-        LeaveType.find({ status: true }), // ✅ Fetch all active leave types
+        LeaveType.find({ status: true }),
         Leave.aggregate([
           { $group: { _id: "$type", count: { $sum: 1 } } },
-        ]), // ✅ Aggregate leave usage stats
+        ]),
         Announcement.find({ status: true }).sort({ createdAt: -1 }).limit(5),
         Meeting.find().sort({ createdAt: -1 }).limit(5),
       ]);
 
-      // 🧮 Attendance Rate Calculation
       const totalAttendance = attendanceRecords.length;
       const presentCount = attendanceRecords.filter(
         (a) => a.status === "Present"
@@ -393,7 +363,6 @@ adminController.get("/dashboard-details", auth, async (req, res) => {
         ? ((presentCount / totalAttendance) * 100).toFixed(2)
         : 0;
 
-      // 📊 Department Distribution
       const departmentDistribution = await Employee.aggregate([
         { $group: { _id: "$department", count: { $sum: 1 } } },
       ]);
@@ -402,7 +371,6 @@ adminController.get("/dashboard-details", auth, async (req, res) => {
         select: "name",
       });
 
-      // 🔹 Combine LeaveType with usage stats
       const leaveTypeStats = leaveTypes.map((lt) => {
         const stat = leaveStats.find(
           (s) => s._id?.toString() === lt._id?.toString() || s._id === lt.leaveType
@@ -416,7 +384,6 @@ adminController.get("/dashboard-details", auth, async (req, res) => {
         };
       });
 
-      // ✅ Final Response
       return sendResponse(res, 200, "Success", {
         message: "SuperAdmin Dashboard fetched successfully!",
         data: {
@@ -432,7 +399,6 @@ adminController.get("/dashboard-details", auth, async (req, res) => {
       });
     }
 
-    // 2️⃣ EMPLOYEE DASHBOARD
     if (role === "employee") {
       const employee = await Employee.findOne({ email: user.email })
         .populate("department", "name")
@@ -474,7 +440,6 @@ adminController.get("/dashboard-details", auth, async (req, res) => {
             .limit(5),
         ]);
 
-      // ✅ Employee Dashboard Response
       return sendResponse(res, 200, "Success", {
         message: "Employee Dashboard fetched successfully!",
         data: {
@@ -495,7 +460,6 @@ adminController.get("/dashboard-details", auth, async (req, res) => {
       });
     }
 
-    // 🚫 Unauthorized Role
     return sendResponse(res, 403, "Failed", { message: "Access denied" });
   } catch (error) {
     console.error("Dashboard Error:", error);

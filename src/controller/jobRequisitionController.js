@@ -18,7 +18,6 @@ jobRequisitionController.post("/create", async (req, res) => {
   }
 });
 
-// ✅ List Job Requisitions
 jobRequisitionController.post("/list", async (req, res) => {
   try {
     const {
@@ -64,7 +63,6 @@ jobRequisitionController.post("/list", async (req, res) => {
   }
 });
 
-// ✅ Update Job Requisition
 jobRequisitionController.put("/update/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -87,7 +85,6 @@ jobRequisitionController.put("/update/:id", async (req, res) => {
   }
 });
 
-// ✅ Delete Job Requisition
 jobRequisitionController.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -107,7 +104,6 @@ jobRequisitionController.delete("/delete/:id", async (req, res) => {
   }
 });
 
-// ✅ Change Job Requisition Status
 jobRequisitionController.put("/change-status/:id", async (req, res) => {
   try {
     const { id } = req.params;
